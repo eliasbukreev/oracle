@@ -48,28 +48,28 @@ variable "cors_allowed_origins" {
   type        = string
 }
 
-variable "openrouter_api_key" {
-  description = "OpenRouter API key stored in Lockbox."
+variable "google_ai_api_key" {
+  description = "Google AI Studio API key stored in Lockbox."
   type        = string
   sensitive   = true
 }
 
-variable "oracle_model" {
-  description = "OpenRouter model identifier."
+variable "google_ai_model" {
+  description = "Google Gemini model identifier."
   type        = string
 }
 
-variable "oracle_max_tokens" {
+variable "google_ai_max_tokens" {
   description = "Maximum number of tokens requested from the model."
   type        = number
 }
 
-variable "oracle_temperature" {
+variable "google_ai_temperature" {
   description = "Model temperature controlled by the backend."
   type        = number
 }
 
-variable "oracle_provider_timeout" {
-  description = "OpenRouter request timeout in seconds."
+variable "google_ai_timeout" {
+  description = "Google Gemini request timeout in seconds."
   type        = number
 }

@@ -8,8 +8,8 @@ resource "yandex_lockbox_secret_version" "openrouter" {
   secret_id = yandex_lockbox_secret.openrouter.id
 
   entries {
-    key        = "OPENROUTER_API_KEY"
-    text_value = var.openrouter_api_key
+    key        = "GOOGLE_AI_API_KEY"
+    text_value = var.google_ai_api_key
   }
 }
 

@@ -7,12 +7,12 @@ import re
 from typing import Any
 from urllib import error as urllib_error
 from urllib import request as urllib_request
+from urllib.parse import quote
 
 
 MAX_QUESTION_LENGTH = 500
 MAX_RESPONSE_FIELD_LENGTH = 4000
-OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-DEFAULT_MAX_TOKENS = 400
+DEFAULT_MAX_TOKENS = 800
 DEFAULT_TEMPERATURE = 0.8
 logger = logging.getLogger(__name__)
 
@@ -79,30 +79,41 @@ def _oracle_prompt() -> str:
     )
 
 
-def _provider_json() -> dict[str, Any] | None:
-    api_key = os.getenv("OPENROUTER_API_KEY", "")
-    model = os.getenv("ORACLE_MODEL", "")
+def _gemini_request(question: str) -> tuple[str, dict[str, Any]] | None:
+    api_key = os.getenv("GOOGLE_AI_API_KEY", "")
+    model = os.getenv("GOOGLE_AI_MODEL", "")
 
     if not api_key or not model:
         logger.error(
-            "openrouter_config_missing api_key_configured=%s model_configured=%s",
+            "gemini_config_missing api_key_configured=%s model_configured=%s",
             bool(api_key),
             bool(model),
         )
         return None
 
     try:
-        max_tokens = int(os.getenv("ORACLE_MAX_TOKENS", str(DEFAULT_MAX_TOKENS)))
-        temperature = float(os.getenv("ORACLE_TEMPERATURE", str(DEFAULT_TEMPERATURE)))
+        max_tokens = int(os.getenv("GOOGLE_AI_MAX_TOKENS", str(DEFAULT_MAX_TOKENS)))
+        temperature = float(os.getenv("GOOGLE_AI_TEMPERATURE", str(DEFAULT_TEMPERATURE)))
     except ValueError:
-        logger.error("openrouter_config_invalid numeric_settings=true")
+        logger.error("gemini_config_invalid numeric_settings=true")
         return None
 
-    return {
-        "model": model,
-        "messages": [],
-        "max_tokens": max_tokens,
-        "temperature": temperature,
+    return model, {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {
+                        "text": f"{_oracle_prompt()}\n\nВопрос пользователя:\n{question}",
+                    }
+                ],
+            }
+        ],
+        "generationConfig": {
+            "temperature": temperature,
+            "maxOutputTokens": max_tokens,
+            "responseMimeType": "application/json",
+        },
     }
 
 
@@ -113,11 +124,11 @@ def _parse_model_json(content: str) -> dict[str, Any] | None:
     try:
         payload = json.loads(cleaned)
     except (json.JSONDecodeError, TypeError):
-        logger.error("openrouter_invalid_model_json")
+        logger.error("gemini_invalid_model_json")
         return None
 
     if not isinstance(payload, dict):
-        logger.error("openrouter_invalid_model_payload type=%s", type(payload).__name__)
+        logger.error("gemini_invalid_model_payload type=%s", type(payload).__name__)
         return None
 
     verdict = payload.get("verdict")
@@ -136,11 +147,11 @@ def _parse_model_json(content: str) -> dict[str, Any] | None:
         or not isinstance(reason, str)
         or not reason.strip()
     ):
-        logger.error("openrouter_invalid_model_schema")
+        logger.error("gemini_invalid_model_schema")
         return None
 
     if any(len(value) > MAX_RESPONSE_FIELD_LENGTH for value in (verdict, prophecy, reason)):
-        logger.error("openrouter_model_response_too_long")
+        logger.error("gemini_model_response_too_long")
         return None
 
     return {
@@ -151,58 +162,68 @@ def _parse_model_json(content: str) -> dict[str, Any] | None:
     }
 
 
-def _ask_openrouter(question: str) -> dict[str, Any] | None:
-    provider_request = _provider_json()
+def _ask_gemini(question: str) -> dict[str, Any] | None:
+    provider_request = _gemini_request(question)
 
     if provider_request is None:
         return None
 
+    model, request_body = provider_request
     logger.info(
-        "openrouter_request_started model=%s question_length=%d",
-        provider_request["model"],
+        "gemini_request_started model=%s question_length=%d",
+        model,
         len(question),
     )
 
-    provider_request["messages"] = [
-        {"role": "system", "content": _oracle_prompt()},
-        {"role": "user", "content": question},
-    ]
+    api_key = os.environ["GOOGLE_AI_API_KEY"]
+    encoded_model = quote(model, safe="")
+    url = (
+        "https://generativelanguage.googleapis.com/v1beta/models/"
+        f"{encoded_model}:generateContent?key={api_key}"
+    )
 
     request = urllib_request.Request(
-        OPENROUTER_URL,
-        data=json.dumps(provider_request).encode("utf-8"),
+        url,
+        data=json.dumps(request_body).encode("utf-8"),
         headers={
-            "Authorization": f"Bearer {os.environ['OPENROUTER_API_KEY']}",
             "Content-Type": "application/json",
-            "HTTP-Referer": os.getenv("ORACLE_SITE_URL", "https://github.com"),
-            "X-Title": "Oracle",
         },
         method="POST",
     )
 
     try:
-        timeout = float(os.getenv("ORACLE_PROVIDER_TIMEOUT", "20"))
+        timeout = float(os.getenv("GOOGLE_AI_TIMEOUT", "20"))
         with urllib_request.urlopen(request, timeout=timeout) as response:
-            logger.info("openrouter_response_received status=%d", response.status)
+            logger.info("gemini_response_received status=%d", response.status)
             provider_response = json.loads(response.read().decode("utf-8"))
-        content = provider_response["choices"][0]["message"]["content"]
+        content = provider_response["candidates"][0]["content"]["parts"][0]["text"]
     except urllib_error.HTTPError as caught_error:
-        logger.error("openrouter_http_error status=%d", caught_error.code)
+        try:
+            error_payload = json.loads(caught_error.read().decode("utf-8"))
+            error_message = error_payload.get("error", {}).get("message", "unknown")
+        except (AttributeError, UnicodeDecodeError, json.JSONDecodeError, TypeError):
+            error_message = "unknown"
+
+        logger.error(
+            "gemini_http_error status=%d message=%s",
+            caught_error.code,
+            str(error_message)[:300],
+        )
         return None
     except urllib_error.URLError:
-        logger.error("openrouter_network_error")
+        logger.error("gemini_network_error")
         return None
     except TimeoutError:
-        logger.error("openrouter_timeout")
+        logger.error("gemini_timeout")
         return None
     except (KeyError, IndexError, UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError):
-        logger.error("openrouter_response_invalid")
+        logger.error("gemini_response_invalid")
         return None
 
     result = _parse_model_json(content)
 
     if result is not None:
-        logger.info("openrouter_response_validated")
+        logger.info("gemini_response_validated")
 
     return result
 
@@ -240,7 +261,7 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         logger.warning("invalid_question_length length=%d", len(question))
         return _response(400, {"error": "invalid_request"}, origin)
 
-    result = _ask_openrouter(question)
+    result = _ask_gemini(question)
 
     if result is None:
         logger.error("oracle_unavailable")

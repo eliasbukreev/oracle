@@ -78,11 +78,11 @@ jobs:
           TF_VAR_function_memory: ${{ vars.ORACLE_FUNCTION_MEMORY }}
           TF_VAR_function_timeout: ${{ vars.ORACLE_FUNCTION_TIMEOUT }}
           TF_VAR_cors_allowed_origins: ${{ vars.CORS_ALLOWED_ORIGINS }}
-          TF_VAR_openrouter_api_key: ${{ secrets.OPENROUTER_API_KEY }}
-          TF_VAR_oracle_model: ${{ vars.ORACLE_MODEL }}
-          TF_VAR_oracle_max_tokens: ${{ vars.ORACLE_MAX_TOKENS }}
-          TF_VAR_oracle_temperature: ${{ vars.ORACLE_TEMPERATURE }}
-          TF_VAR_oracle_provider_timeout: ${{ vars.ORACLE_PROVIDER_TIMEOUT }}
+          TF_VAR_google_ai_api_key: ${{ secrets.GOOGLE_AI_API_KEY }}
+          TF_VAR_google_ai_model: ${{ vars.GOOGLE_AI_MODEL }}
+          TF_VAR_google_ai_max_tokens: ${{ vars.GOOGLE_AI_MAX_TOKENS }}
+          TF_VAR_google_ai_temperature: ${{ vars.GOOGLE_AI_TEMPERATURE }}
+          TF_VAR_google_ai_timeout: ${{ vars.GOOGLE_AI_TIMEOUT }}
         run: terraform plan -no-color
 
       - name: Terraform apply
@@ -97,11 +97,11 @@ jobs:
           TF_VAR_function_memory: ${{ vars.ORACLE_FUNCTION_MEMORY }}
           TF_VAR_function_timeout: ${{ vars.ORACLE_FUNCTION_TIMEOUT }}
           TF_VAR_cors_allowed_origins: ${{ vars.CORS_ALLOWED_ORIGINS }}
-          TF_VAR_openrouter_api_key: ${{ secrets.OPENROUTER_API_KEY }}
-          TF_VAR_oracle_model: ${{ vars.ORACLE_MODEL }}
-          TF_VAR_oracle_max_tokens: ${{ vars.ORACLE_MAX_TOKENS }}
-          TF_VAR_oracle_temperature: ${{ vars.ORACLE_TEMPERATURE }}
-          TF_VAR_oracle_provider_timeout: ${{ vars.ORACLE_PROVIDER_TIMEOUT }}
+          TF_VAR_google_ai_api_key: ${{ secrets.GOOGLE_AI_API_KEY }}
+          TF_VAR_google_ai_model: ${{ vars.GOOGLE_AI_MODEL }}
+          TF_VAR_google_ai_max_tokens: ${{ vars.GOOGLE_AI_MAX_TOKENS }}
+          TF_VAR_google_ai_temperature: ${{ vars.GOOGLE_AI_TEMPERATURE }}
+          TF_VAR_google_ai_timeout: ${{ vars.GOOGLE_AI_TIMEOUT }}
         run: terraform apply -auto-approve -no-color
 
       - name: Read function URL
