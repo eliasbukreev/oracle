@@ -2,10 +2,17 @@ import base64
 import binascii
 import json
 import os
+import re
 from typing import Any
+from urllib import error as urllib_error
+from urllib import request as urllib_request
 
 
 MAX_QUESTION_LENGTH = 500
+MAX_RESPONSE_FIELD_LENGTH = 4000
+OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+DEFAULT_MAX_TOKENS = 400
+DEFAULT_TEMPERATURE = 0.8
 
 
 def _allowed_origins() -> set[str]:
@@ -60,6 +67,113 @@ def _request_origin(event: dict[str, Any]) -> str | None:
     return headers.get("Origin") or headers.get("origin")
 
 
+def _oracle_prompt() -> str:
+    return (
+        "Ты — Оракул. Отвечай на русском языке в мистическом стиле. "
+        "Не упоминай, что ты искусственный интеллект. "
+        "Верни только валидный JSON без markdown и без ``` с полями: "
+        '"verdict" (ДА или НЕТ), "confidence" (число от 0 до 100), '
+        '"prophecy" (короткое пророчество), "reason" (краткое объяснение).'
+    )
+
+
+def _provider_json() -> dict[str, Any] | None:
+    api_key = os.getenv("OPENROUTER_API_KEY", "")
+    model = os.getenv("ORACLE_MODEL", "")
+
+    if not api_key or not model:
+        return None
+
+    try:
+        max_tokens = int(os.getenv("ORACLE_MAX_TOKENS", str(DEFAULT_MAX_TOKENS)))
+        temperature = float(os.getenv("ORACLE_TEMPERATURE", str(DEFAULT_TEMPERATURE)))
+    except ValueError:
+        return None
+
+    return {
+        "model": model,
+        "messages": [],
+        "max_tokens": max_tokens,
+        "temperature": temperature,
+    }
+
+
+def _parse_model_json(content: str) -> dict[str, Any] | None:
+    cleaned = content.strip()
+    cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", cleaned, flags=re.IGNORECASE)
+
+    try:
+        payload = json.loads(cleaned)
+    except (json.JSONDecodeError, TypeError):
+        return None
+
+    if not isinstance(payload, dict):
+        return None
+
+    verdict = payload.get("verdict")
+    confidence = payload.get("confidence")
+    prophecy = payload.get("prophecy")
+    reason = payload.get("reason")
+
+    if (
+        not isinstance(verdict, str)
+        or not verdict.strip()
+        or not isinstance(confidence, (int, float))
+        or isinstance(confidence, bool)
+        or not 0 <= confidence <= 100
+        or not isinstance(prophecy, str)
+        or not prophecy.strip()
+        or not isinstance(reason, str)
+        or not reason.strip()
+    ):
+        return None
+
+    if any(len(value) > MAX_RESPONSE_FIELD_LENGTH for value in (verdict, prophecy, reason)):
+        return None
+
+    return {
+        "verdict": verdict.strip(),
+        "confidence": confidence,
+        "prophecy": prophecy.strip(),
+        "reason": reason.strip(),
+    }
+
+
+def _ask_openrouter(question: str) -> dict[str, Any] | None:
+    provider_request = _provider_json()
+
+    if provider_request is None:
+        return None
+
+    provider_request["messages"] = [
+        {"role": "system", "content": _oracle_prompt()},
+        {"role": "user", "content": question},
+    ]
+
+    request = urllib_request.Request(
+        OPENROUTER_URL,
+        data=json.dumps(provider_request).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {os.environ['OPENROUTER_API_KEY']}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": os.getenv("ORACLE_SITE_URL", "https://github.com"),
+            "X-Title": "Oracle",
+        },
+        method="POST",
+    )
+
+    try:
+        timeout = float(os.getenv("ORACLE_PROVIDER_TIMEOUT", "20"))
+        with urllib_request.urlopen(request, timeout=timeout) as response:
+            provider_response = json.loads(response.read().decode("utf-8"))
+        content = provider_response["choices"][0]["message"]["content"]
+    except (urllib_error.HTTPError, urllib_error.URLError, TimeoutError, KeyError, IndexError,
+            UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError):
+        return None
+
+    return _parse_model_json(content)
+
+
 def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     """Return a minimal Oracle response for a Yandex Cloud Function HTTP event."""
     del context
@@ -88,13 +202,9 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     if not question or len(question) > MAX_QUESTION_LENGTH:
         return _response(400, {"error": "invalid_request"}, origin)
 
-    return _response(
-        200,
-        {
-            "verdict": "ДА",
-            "confidence": 87,
-            "prophecy": "Путь открыт для того, кто готов сделать первый шаг.",
-            "reason": "Вопрос принят Оракулом. Ответ пока прост, но знак благоприятен.",
-        },
-        origin,
-    )
+    result = _ask_openrouter(question)
+
+    if result is None:
+        return _response(502, {"error": "oracle_unavailable"}, origin)
+
+    return _response(200, result, origin)

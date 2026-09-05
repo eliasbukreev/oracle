@@ -47,3 +47,29 @@ variable "cors_allowed_origins" {
   description = "Comma-separated origins allowed by the function CORS policy."
   type        = string
 }
+
+variable "openrouter_api_key" {
+  description = "OpenRouter API key stored in Lockbox."
+  type        = string
+  sensitive   = true
+}
+
+variable "oracle_model" {
+  description = "OpenRouter model identifier."
+  type        = string
+}
+
+variable "oracle_max_tokens" {
+  description = "Maximum number of tokens requested from the model."
+  type        = number
+}
+
+variable "oracle_temperature" {
+  description = "Model temperature controlled by the backend."
+  type        = number
+}
+
+variable "oracle_provider_timeout" {
+  description = "OpenRouter request timeout in seconds."
+  type        = number
+}

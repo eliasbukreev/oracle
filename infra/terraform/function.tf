@@ -15,7 +15,18 @@ resource "yandex_function" "oracle" {
   service_account_id = yandex_iam_service_account.function.id
 
   environment = {
-    CORS_ALLOWED_ORIGINS = var.cors_allowed_origins
+    CORS_ALLOWED_ORIGINS    = var.cors_allowed_origins
+    ORACLE_MODEL            = var.oracle_model
+    ORACLE_MAX_TOKENS       = var.oracle_max_tokens
+    ORACLE_TEMPERATURE      = var.oracle_temperature
+    ORACLE_PROVIDER_TIMEOUT = var.oracle_provider_timeout
+  }
+
+  secrets {
+    id                   = yandex_lockbox_secret.openrouter.id
+    version_id           = yandex_lockbox_secret_version.openrouter.id
+    key                  = "OPENROUTER_API_KEY"
+    environment_variable = "OPENROUTER_API_KEY"
   }
 
   content {
@@ -24,6 +35,7 @@ resource "yandex_function" "oracle" {
 
   depends_on = [
     yandex_resourcemanager_folder_iam_member.function_logging,
+    yandex_lockbox_secret_iam_binding.function_payload_viewer,
   ]
 }
 
