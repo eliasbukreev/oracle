@@ -42,6 +42,7 @@ jobs:
         working-directory: frontend
         env:
           NUXT_APP_BASE_URL: /${{ github.event.repository.name }}/
+          NUXT_PUBLIC_ORACLE_API_URL: ${{ vars.ORACLE_API_URL }}
         run: npm run generate
 
       - name: Upload Pages artifact

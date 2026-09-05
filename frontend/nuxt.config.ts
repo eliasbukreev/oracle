@@ -5,6 +5,11 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-01-15',
   devtools: { enabled: true },
   css: ['~/assets/css/main.css'],
+  runtimeConfig: {
+    public: {
+      oracleApiUrl: process.env.NUXT_PUBLIC_ORACLE_API_URL || '',
+    },
+  },
   app: {
     baseURL: process.env.NUXT_APP_BASE_URL || defaultBaseURL,
     head: {

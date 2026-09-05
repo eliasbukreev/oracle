@@ -1,12 +1,16 @@
 import type { OracleError, OracleResponse } from '~/types/oracle'
-import { askOracle } from '~/services/oracleMock'
+import { askOracle } from '~/services/oracleApi'
 
 const errorMessages: Record<string, string> = {
+  invalid_request: 'Вопрос не удалось принять. Проверь его и попробуй еще раз.',
+  invalid_client: 'Оракул не смог подтвердить клиента. Обнови страницу и попробуй еще раз.',
   oracle_resting: 'Оракул отдыхает. Дай ему немного тишины и попробуй позже.',
   oracle_unavailable: 'Связь с хранилищем пророчеств прервалась. Попробуй еще раз.',
+  internal_error: 'Оракул временно недоступен. Попробуй еще раз позже.',
 }
 
 export function useOracle() {
+  const config = useRuntimeConfig()
   const result = ref<OracleResponse | null>(null)
   const error = ref<OracleError | null>(null)
   const isLoading = ref(false)
@@ -23,7 +27,7 @@ export function useOracle() {
     error.value = null
 
     try {
-      result.value = await askOracle(trimmedQuestion)
+      result.value = await askOracle(trimmedQuestion, config.public.oracleApiUrl)
     } catch (caughtError) {
       const code = caughtError instanceof Error ? caughtError.message : 'internal_error'
 
