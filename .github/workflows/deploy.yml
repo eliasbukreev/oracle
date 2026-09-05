@@ -1,0 +1,148 @@
+name: Deploy Oracle
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - 'infra/terraform/**'
+      - '.github/workflows/deploy.yml'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: oracle-deploy
+  cancel-in-progress: true
+
+env:
+  TF_IN_AUTOMATION: true
+  TF_INPUT: false
+  TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+  TF_VAR_service_account_key_file: /tmp/yc-service-account-key.json
+
+jobs:
+  terraform:
+    name: Terraform
+    runs-on: ubuntu-latest
+    outputs:
+      function_url: ${{ steps.function-output.outputs.function_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+
+      - name: Write Yandex service account key
+        env:
+          YC_SERVICE_ACCOUNT_KEY: ${{ secrets.YC_SERVICE_ACCOUNT_KEY }}
+        run: printf '%s' "$YC_SERVICE_ACCOUNT_KEY" > "$TF_VAR_service_account_key_file"
+
+      - name: Terraform init
+        working-directory: infra/terraform
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.YC_S3_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.YC_S3_SECRET_KEY }}
+        run: |
+          terraform init \
+            -backend-config="bucket=${TF_STATE_BUCKET}" \
+            -backend-config="access_key=${AWS_ACCESS_KEY_ID}" \
+            -backend-config="secret_key=${AWS_SECRET_ACCESS_KEY}"
+
+      - name: Terraform format check
+        working-directory: infra/terraform
+        run: terraform fmt -check -recursive
+
+      - name: Terraform validate
+        working-directory: infra/terraform
+        run: terraform validate
+
+      - name: Terraform plan
+        if: github.event_name == 'pull_request'
+        working-directory: infra/terraform
+        env:
+          TF_VAR_cloud_id: ${{ vars.YC_CLOUD_ID }}
+          TF_VAR_folder_id: ${{ vars.YC_FOLDER_ID }}
+          TF_VAR_zone: ${{ vars.YC_ZONE }}
+          TF_VAR_function_name: ${{ vars.ORACLE_FUNCTION_NAME }}
+          TF_VAR_function_runtime: ${{ vars.ORACLE_FUNCTION_RUNTIME }}
+          TF_VAR_function_memory: ${{ vars.ORACLE_FUNCTION_MEMORY }}
+          TF_VAR_function_timeout: ${{ vars.ORACLE_FUNCTION_TIMEOUT }}
+          TF_VAR_cors_allowed_origins: ${{ vars.CORS_ALLOWED_ORIGINS }}
+        run: terraform plan -no-color
+
+      - name: Terraform apply
+        if: github.event_name == 'push'
+        working-directory: infra/terraform
+        env:
+          TF_VAR_cloud_id: ${{ vars.YC_CLOUD_ID }}
+          TF_VAR_folder_id: ${{ vars.YC_FOLDER_ID }}
+          TF_VAR_zone: ${{ vars.YC_ZONE }}
+          TF_VAR_function_name: ${{ vars.ORACLE_FUNCTION_NAME }}
+          TF_VAR_function_runtime: ${{ vars.ORACLE_FUNCTION_RUNTIME }}
+          TF_VAR_function_memory: ${{ vars.ORACLE_FUNCTION_MEMORY }}
+          TF_VAR_function_timeout: ${{ vars.ORACLE_FUNCTION_TIMEOUT }}
+          TF_VAR_cors_allowed_origins: ${{ vars.CORS_ALLOWED_ORIGINS }}
+        run: terraform apply -auto-approve -no-color
+
+      - name: Read function URL
+        id: function-output
+        if: github.event_name == 'push'
+        working-directory: infra/terraform
+        run: echo "function_url=$(terraform output -raw function_url)" >> "$GITHUB_OUTPUT"
+
+  frontend:
+    name: Build frontend
+    needs: terraform
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Generate static site
+        working-directory: frontend
+        env:
+          NUXT_APP_BASE_URL: /${{ github.event.repository.name }}/
+          NUXT_PUBLIC_ORACLE_API_URL: ${{ needs.terraform.outputs.function_url || vars.ORACLE_API_URL }}
+        run: npm run generate
+
+      - name: Upload Pages artifact
+        if: github.event_name == 'push'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/.output/public
+
+  deploy:
+    name: Deploy to GitHub Pages
+    if: github.event_name == 'push'
+    needs: frontend
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
