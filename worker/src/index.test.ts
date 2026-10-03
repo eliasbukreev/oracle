@@ -57,6 +57,23 @@ afterEach(() => {
 });
 
 describe("worker fetch", () => {
+  it("OPTIONS отвечает 204 даже с битым конфигом", async () => {
+    const res = await worker.fetch(
+      new Request("https://oracle.test/", { method: "OPTIONS" }),
+      makeEnv({ GEMINI_API_KEY: "   ", GEMINI_MODEL: "" }),
+    );
+    expect(res.status).toBe(204);
+  });
+
+  it("не-POST отвечает 405 даже с битым конфигом", async () => {
+    const res = await worker.fetch(
+      new Request("https://oracle.test/", { method: "GET" }),
+      makeEnv({ GEMINI_API_KEY: "   ", GEMINI_MODEL: "" }),
+    );
+    expect(res.status).toBe(405);
+    expect(await res.json()).toEqual({ error: "invalid_request" });
+  });
+
   it("по умолчанию отвечает через Gemini", async () => {
     let seenUrl = "";
     vi.stubGlobal(

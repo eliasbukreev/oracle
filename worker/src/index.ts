@@ -100,6 +100,18 @@ function buildProvider(kind: string, env: Env): OracleProvider | null {
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    const corsAllowedOrigins = env.CORS_ALLOWED_ORIGINS ?? "";
+
+    if (request.method === "OPTIONS") {
+      return jsonResponse(request, corsAllowedOrigins, 204, null);
+    }
+
+    if (request.method !== "POST") {
+      return jsonResponse(request, corsAllowedOrigins, 405, {
+        error: "invalid_request",
+      });
+    }
+
     const primaryKind = env.ORACLE_PROVIDER?.trim() || DEFAULT_PROVIDER;
     const primary = buildProvider(primaryKind, env);
 

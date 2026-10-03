@@ -48,13 +48,15 @@ export function createProviderConfig(
   const temperature = Number.parseFloat(raw.temperature);
   const timeoutSeconds = Number.parseInt(raw.timeoutSeconds, 10);
 
-  if (
-    !model ||
-    !apiKey ||
-    !Number.isFinite(maxOutputTokens) ||
-    !Number.isFinite(temperature)
-  ) {
-    console.error("provider_config_invalid");
+  // Логируем только имена битых полей, не значения: среди них секреты.
+  const invalidFields: string[] = [];
+  if (!model) invalidFields.push("model");
+  if (!apiKey) invalidFields.push("api_key");
+  if (!Number.isFinite(maxOutputTokens)) invalidFields.push("max_tokens");
+  if (!Number.isFinite(temperature)) invalidFields.push("temperature");
+
+  if (invalidFields.length > 0) {
+    console.error(`provider_config_invalid fields=${invalidFields.join(",")}`);
     return null;
   }
 
