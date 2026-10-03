@@ -10,6 +10,17 @@ const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models";
 
 export const PROVIDER_GEMINI = "gemini";
 
+/** Вытаскивает из исключения безопасную для логов строку.
+ *  Ключ у Gemini живёт в query (`?key=`), поэтому на всякий случай
+ *  затираем его значение: тексты сетевых ошибок его содержать не должны,
+ *  но секрет дороже паранойи. */
+function errorDetail(error: unknown): string {
+  const type = error instanceof Error ? error.name : "unknown";
+  const message =
+    error instanceof Error ? error.message.slice(0, 300) : "unknown";
+  return `type=${type} message=${message.replace(/key=[^&\s]*/g, "key=***")}`;
+}
+
 export class GeminiProvider implements OracleProvider {
   readonly name = PROVIDER_GEMINI;
 
@@ -65,9 +76,17 @@ export class GeminiProvider implements OracleProvider {
         return null;
       }
 
-      const payload = (await geminiResponse.json()) as {
+      const payload = await geminiResponse
+        .json()
+        .catch(() => null) as {
         candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-      };
+      } | null;
+
+      if (!payload) {
+        console.error("gemini_response_unreadable");
+        return null;
+      }
+
       const content = payload.candidates?.[0]?.content?.parts?.[0]?.text;
       const result =
         typeof content === "string" ? parseModelResponse(content) : null;
@@ -80,9 +99,7 @@ export class GeminiProvider implements OracleProvider {
       console.log("gemini_response_validated");
       return result;
     } catch (error) {
-      console.error(
-        `gemini_request_failed type=${error instanceof Error ? error.name : "unknown"}`,
-      );
+      console.error(`gemini_request_failed ${errorDetail(error)}`);
       return null;
     } finally {
       clearTimeout(timeoutId);

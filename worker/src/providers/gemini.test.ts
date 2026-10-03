@@ -1,7 +1,11 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { fakeFetch, validConfig, VALID_ORACLE_JSON } from "./fixtures";
 import { GeminiProvider } from "./gemini";
 import type { FetchImpl } from "../types";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 function geminiOk(text: string): Response {
   const payload = { candidates: [{ content: { parts: [{ text }] } }] };
@@ -56,5 +60,32 @@ describe("GeminiProvider", () => {
     }) as unknown as FetchImpl;
     const provider = new GeminiProvider(validConfig(), fetchImpl);
     expect(await provider.ask("Учить ли Rust?")).toBeNull();
+  });
+
+  it("200 с нечитаемым телом логирует response_unreadable", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const provider = new GeminiProvider(
+      validConfig(),
+      fakeFetch(() => new Response("", { status: 200 })),
+    );
+
+    expect(await provider.ask("Учить ли Rust?")).toBeNull();
+    expect(errorSpy).toHaveBeenCalledWith("gemini_response_unreadable");
+    expect(errorSpy).not.toHaveBeenCalledWith(
+      expect.stringContaining("gemini_request_failed"),
+    );
+  });
+
+  it("сетевая ошибка логирует тип и сообщение", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const fetchImpl = vi.fn(async () => {
+      throw new TypeError("fetch failed");
+    }) as unknown as FetchImpl;
+    const provider = new GeminiProvider(validConfig(), fetchImpl);
+
+    expect(await provider.ask("Учить ли Rust?")).toBeNull();
+    expect(errorSpy).toHaveBeenCalledWith(
+      "gemini_request_failed type=TypeError message=fetch failed",
+    );
   });
 });

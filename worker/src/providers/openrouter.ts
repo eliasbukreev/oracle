@@ -10,6 +10,15 @@ const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
 export const PROVIDER_OPENROUTER = "openrouter";
 
+/** Безопасная для логов строка из исключения (только тип и сообщение,
+ *  значений секретов здесь нет — ключ уходит лишь в заголовок). */
+function errorDetail(error: unknown): string {
+  const type = error instanceof Error ? error.name : "unknown";
+  const message =
+    error instanceof Error ? error.message.slice(0, 300) : "unknown";
+  return `type=${type} message=${message}`;
+}
+
 interface OpenRouterErrorPayload {
   error?: {
     code?: unknown;
@@ -85,8 +94,15 @@ export class OpenRouterProvider implements OracleProvider {
         return null;
       }
 
-      const payload =
-        (await openRouterResponse.json()) as OpenRouterCompletionsPayload;
+      const payload = (await openRouterResponse
+        .json()
+        .catch(() => null)) as OpenRouterCompletionsPayload | null;
+
+      if (!payload) {
+        console.error("openrouter_response_unreadable");
+        return null;
+      }
+
       const content = payload.choices?.[0]?.message?.content;
       const result =
         typeof content === "string" ? parseModelResponse(content) : null;
@@ -99,9 +115,7 @@ export class OpenRouterProvider implements OracleProvider {
       console.log("openrouter_response_validated");
       return result;
     } catch (error) {
-      console.error(
-        `openrouter_request_failed type=${error instanceof Error ? error.name : "unknown"}`,
-      );
+      console.error(`openrouter_request_failed ${errorDetail(error)}`);
       return null;
     } finally {
       clearTimeout(timeoutId);
