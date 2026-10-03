@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { OracleProvider, OracleResponse } from "../types";
-import { FallbackProvider } from "./fallback";
+import { createFallbackProvider } from "./fallback";
 
 const PROPHECY: OracleResponse = {
   verdict: "ДА",
@@ -27,7 +27,7 @@ afterEach(() => {
 describe("FallbackProvider", () => {
   it("возвращает ответ primary и не трогает secondary", async () => {
     const secondaryAsk = vi.fn(async () => PROPHECY);
-    const provider = new FallbackProvider(stubProvider(PROPHECY, "primary"), {
+    const provider = createFallbackProvider(stubProvider(PROPHECY, "primary"), {
       name: "secondary",
       ask: secondaryAsk,
     });
@@ -39,7 +39,7 @@ describe("FallbackProvider", () => {
 
   it("при пустом ответе primary спрашивает secondary тем же вопросом", async () => {
     const secondaryAsk = vi.fn(async () => PROPHECY);
-    const provider = new FallbackProvider(stubProvider(null, "primary"), {
+    const provider = createFallbackProvider(stubProvider(null, "primary"), {
       name: "secondary",
       ask: secondaryAsk,
     });
@@ -49,7 +49,7 @@ describe("FallbackProvider", () => {
   });
 
   it("возвращает null когда оба провайдера пусты", async () => {
-    const provider = new FallbackProvider(
+    const provider = createFallbackProvider(
       stubProvider(null, "primary"),
       stubProvider(null, "secondary"),
     );

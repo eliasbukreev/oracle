@@ -6,9 +6,21 @@ import {
   createProvider,
   createProviderConfig,
 } from "./providers";
-import { GeminiProvider } from "./providers/gemini";
-import { OpenRouterProvider } from "./providers/openrouter";
-import { validConfig, VALID_RAW } from "./providers/fixtures";
+import type { OracleProviderConfig } from "./types";
+
+const VALID_RAW = {
+  apiKey: "test-key",
+  model: "test-model",
+  maxOutputTokens: "800",
+  temperature: "0.8",
+  timeoutSeconds: "20",
+};
+
+function validConfig(): OracleProviderConfig {
+  const config = createProviderConfig(VALID_RAW);
+  if (!config) throw new Error("valid config expected");
+  return config;
+}
 
 describe("createProviderConfig", () => {
   it("парсит корректные строки", () => {
@@ -45,14 +57,14 @@ describe("createProvider", () => {
 
   it("создаёт GeminiProvider", () => {
     const provider = createProvider("gemini", validConfig());
-    expect(provider).toBeInstanceOf(GeminiProvider);
     expect(provider.name).toBe("gemini");
+    expect(typeof provider.ask).toBe("function");
   });
 
   it("создаёт OpenRouterProvider", () => {
     const provider = createProvider(PROVIDER_OPENROUTER, validConfig());
-    expect(provider).toBeInstanceOf(OpenRouterProvider);
     expect(provider.name).toBe("openrouter");
+    expect(typeof provider.ask).toBe("function");
   });
 
   it("бросает на неизвестном провайдере", () => {

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { FetchImpl } from "../types";
-import { fakeFetch, validConfig, VALID_ORACLE_JSON } from "./fixtures";
-import { OpenRouterProvider } from "./openrouter";
+import { fakeFetch, strictFetch, validConfig, VALID_ORACLE_JSON } from "./fixtures";
+import { createOpenRouterProvider } from "./openrouter";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -24,7 +24,7 @@ describe("OpenRouterProvider", () => {
       return openRouterOk(VALID_ORACLE_JSON);
     });
 
-    const result = await new OpenRouterProvider(validConfig(), fetchImpl).ask(
+    const result = await createOpenRouterProvider(validConfig(), fetchImpl).ask(
       "Учить ли Rust?",
     );
 
@@ -44,7 +44,7 @@ describe("OpenRouterProvider", () => {
   });
 
   it("возвращает null при HTTP-ошибке", async () => {
-    const provider = new OpenRouterProvider(
+    const provider = createOpenRouterProvider(
       validConfig(),
       fakeFetch(
         () =>
@@ -57,7 +57,7 @@ describe("OpenRouterProvider", () => {
   });
 
   it("возвращает null при битом ответе модели", async () => {
-    const provider = new OpenRouterProvider(
+    const provider = createOpenRouterProvider(
       validConfig(),
       fakeFetch(() => openRouterOk('{"verdict":"ДА"}')),
     );
@@ -65,7 +65,7 @@ describe("OpenRouterProvider", () => {
   });
 
   it("возвращает null при пустом content", async () => {
-    const provider = new OpenRouterProvider(
+    const provider = createOpenRouterProvider(
       validConfig(),
       fakeFetch(() => openRouterOk(null)),
     );
@@ -76,13 +76,13 @@ describe("OpenRouterProvider", () => {
     const fetchImpl = vi.fn(async () => {
       throw new TypeError("network down");
     }) as unknown as FetchImpl;
-    const provider = new OpenRouterProvider(validConfig(), fetchImpl);
+    const provider = createOpenRouterProvider(validConfig(), fetchImpl);
     expect(await provider.ask("Учить ли Rust?")).toBeNull();
   });
 
   it("200 с нечитаемым телом логирует response_unreadable", async () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    const provider = new OpenRouterProvider(
+    const provider = createOpenRouterProvider(
       validConfig(),
       fakeFetch(() => new Response("", { status: 200 })),
     );
@@ -99,11 +99,21 @@ describe("OpenRouterProvider", () => {
     const fetchImpl = vi.fn(async () => {
       throw new TypeError("fetch failed");
     }) as unknown as FetchImpl;
-    const provider = new OpenRouterProvider(validConfig(), fetchImpl);
+    const provider = createOpenRouterProvider(validConfig(), fetchImpl);
 
     expect(await provider.ask("Учить ли Rust?")).toBeNull();
     expect(errorSpy).toHaveBeenCalledWith(
       "openrouter_request_failed type=TypeError message=fetch failed",
     );
+  });
+
+  it("вызывает fetch без receiver (строгость workerd)", async () => {
+    const provider = createOpenRouterProvider(
+      validConfig(),
+      strictFetch(() => openRouterOk(VALID_ORACLE_JSON)),
+    );
+    expect(await provider.ask("Учить ли Rust?")).toMatchObject({
+      verdict: "ДА",
+    });
   });
 });

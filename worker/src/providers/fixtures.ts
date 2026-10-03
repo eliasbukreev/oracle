@@ -32,3 +32,21 @@ export function fakeFetch(
     return Promise.resolve(result);
   }) as FetchImpl;
 }
+
+// fetch-дабл, эмулирующий строгость workerd: вызов с неверным `this`
+export function strictFetch(
+  handler: (url: string, init?: RequestInit) => Response | Promise<Response>,
+): FetchImpl {
+  return function (
+    this: unknown,
+    input: string | URL | Request,
+    init?: RequestInit,
+  ) {
+    if (this !== undefined) {
+      throw new TypeError(
+        "Illegal invocation: function called with incorrect `this` reference.",
+      );
+    }
+    return Promise.resolve(handler(String(input), init));
+  } as unknown as FetchImpl;
+}

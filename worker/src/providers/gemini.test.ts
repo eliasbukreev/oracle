@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fakeFetch, validConfig, VALID_ORACLE_JSON } from "./fixtures";
-import { GeminiProvider } from "./gemini";
+import {
+  fakeFetch,
+  strictFetch,
+  validConfig,
+  VALID_ORACLE_JSON,
+} from "./fixtures";
+import { createGeminiProvider } from "./gemini";
 import type { FetchImpl } from "../types";
 
 afterEach(() => {
@@ -22,7 +27,7 @@ describe("GeminiProvider", () => {
       return geminiOk(VALID_ORACLE_JSON);
     });
 
-    const result = await new GeminiProvider(validConfig(), fetchImpl).ask(
+    const result = await createGeminiProvider(validConfig(), fetchImpl).ask(
       "Учить ли Rust?",
     );
 
@@ -39,7 +44,7 @@ describe("GeminiProvider", () => {
   });
 
   it("возвращает null при HTTP-ошибке", async () => {
-    const provider = new GeminiProvider(
+    const provider = createGeminiProvider(
       validConfig(),
       fakeFetch(() => new Response("{}", { status: 400 })),
     );
@@ -47,7 +52,7 @@ describe("GeminiProvider", () => {
   });
 
   it("возвращает null при битом ответе модели", async () => {
-    const provider = new GeminiProvider(
+    const provider = createGeminiProvider(
       validConfig(),
       fakeFetch(() => geminiOk('{"verdict":"ДА"}')),
     );
@@ -58,13 +63,15 @@ describe("GeminiProvider", () => {
     const fetchImpl = vi.fn(async () => {
       throw new TypeError("network down");
     }) as unknown as FetchImpl;
-    const provider = new GeminiProvider(validConfig(), fetchImpl);
+    const provider = createGeminiProvider(validConfig(), fetchImpl);
     expect(await provider.ask("Учить ли Rust?")).toBeNull();
   });
 
   it("200 с нечитаемым телом логирует response_unreadable", async () => {
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    const provider = new GeminiProvider(
+    const errorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const provider = createGeminiProvider(
       validConfig(),
       fakeFetch(() => new Response("", { status: 200 })),
     );
@@ -77,15 +84,27 @@ describe("GeminiProvider", () => {
   });
 
   it("сетевая ошибка логирует тип и сообщение", async () => {
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const errorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
     const fetchImpl = vi.fn(async () => {
       throw new TypeError("fetch failed");
     }) as unknown as FetchImpl;
-    const provider = new GeminiProvider(validConfig(), fetchImpl);
+    const provider = createGeminiProvider(validConfig(), fetchImpl);
 
     expect(await provider.ask("Учить ли Rust?")).toBeNull();
     expect(errorSpy).toHaveBeenCalledWith(
       "gemini_request_failed type=TypeError message=fetch failed",
     );
+  });
+
+  it("вызывает fetch без receiver (строгость workerd)", async () => {
+    const provider = createGeminiProvider(
+      validConfig(),
+      strictFetch(() => geminiOk(VALID_ORACLE_JSON)),
+    );
+    expect(await provider.ask("Учить ли Rust?")).toMatchObject({
+      verdict: "ДА",
+    });
   });
 });
