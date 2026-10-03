@@ -56,6 +56,77 @@ describe("OpenRouterProvider", () => {
     expect(await provider.ask("Учить ли Rust?")).toBeNull();
   });
 
+  it("логирует код, message и error_type из тела ошибки", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const provider = createOpenRouterProvider(
+      validConfig(),
+      fakeFetch(
+        () =>
+          new Response(
+            JSON.stringify({
+              error: {
+                code: 403,
+                message: "Request blocked",
+                metadata: { error_type: "permission_denied" },
+              },
+            }),
+            { status: 403 },
+          ),
+      ),
+    );
+
+    expect(await provider.ask("Учить ли Rust?")).toBeNull();
+    expect(errorSpy).toHaveBeenCalledWith(
+      "openrouter_http_error status=403 message=code=403 Request blocked type=permission_denied",
+    );
+  });
+
+  it("логирует строковую ошибку как есть", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const provider = createOpenRouterProvider(
+      validConfig(),
+      fakeFetch(
+        () =>
+          new Response(JSON.stringify({ error: "flat failure" }), {
+            status: 403,
+          }),
+      ),
+    );
+
+    expect(await provider.ask("Учить ли Rust?")).toBeNull();
+    expect(errorSpy).toHaveBeenCalledWith(
+      "openrouter_http_error status=403 message=flat failure",
+    );
+  });
+
+  it("логирует фрагмент не-JSON тела ошибки", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const provider = createOpenRouterProvider(
+      validConfig(),
+      fakeFetch(
+        () => new Response("<html>blocked</html>", { status: 403 }),
+      ),
+    );
+
+    expect(await provider.ask("Учить ли Rust?")).toBeNull();
+    expect(errorSpy).toHaveBeenCalledWith(
+      "openrouter_http_error status=403 message=<html>blocked</html>",
+    );
+  });
+
+  it("пустое тело ошибки даёт unknown", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const provider = createOpenRouterProvider(
+      validConfig(),
+      fakeFetch(() => new Response("", { status: 403 })),
+    );
+
+    expect(await provider.ask("Учить ли Rust?")).toBeNull();
+    expect(errorSpy).toHaveBeenCalledWith(
+      "openrouter_http_error status=403 message=unknown",
+    );
+  });
+
   it("возвращает null при битом ответе модели", async () => {
     const provider = createOpenRouterProvider(
       validConfig(),
