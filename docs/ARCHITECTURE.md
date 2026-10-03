@@ -40,7 +40,23 @@ docs/       # документация
 
 ## Worker `worker/`
 
-Код: `worker/src/index.ts`, конфиг: `worker/wrangler.toml`.
+Код: `worker/src/`, конфиг: `worker/wrangler.toml`. Слои разделены:
+бизнес-логика ничего не знает про Cloudflare, платформа — ничего про LLM.
+
+```text
+src/types.ts      # контракты: OracleResponse, OracleProvider, OracleDeps, RateLimiter
+src/oracle.ts     # чистый домен: валидация вопроса/ответа, промпт, парсинг
+src/providers.ts  # LLM-провайдеры: GeminiProvider, фабрика createProvider
+src/http.ts       # Cloudflare-адаптер: CORS, JSON-ответы, clientIp, rate-limit
+src/handler.ts    # оркестрация handleAsk(request, deps)
+src/index.ts      # composition root: Env → конфиг → провайдер → handleAsk
+```
+
+Выбор LLM — через DI: хендлер зависит только от интерфейса
+`OracleProvider`, конкретная реализация подставляется фабрикой
+`createProvider(kind, config)`. `kind` читается из env `ORACLE_PROVIDER`
+(дефолт `"gemini"`), fetch для провайдера тоже инжектится — новый
+провайдер это новый класс + одна ветка в фабрике, хендлер не меняется.
 
 Обработка запроса:
 
@@ -103,4 +119,7 @@ npm run test        # vitest run
 npm run test:watch  # vitest (watch-режим)
 ```
 
-Тесты покрывают чистую логику без сети и браузера: в воркере — валидацию ответа модели, CORS, rate-limit и весь `fetch`-хендлер с моками (лимитеры и Gemini подменяются); во фронте — `services/oracleApi` (успех, коды ошибок, `retry_after` из тела и заголовка) и `services/oracleErrors` (склонения, `retry`-тексты). Те же команды гоняются в CI до деплоя.
+Тесты покрывают чистую логику без сети и браузера: в воркере по модулям —
+`oracle` (валидация, промпт), `providers` (фабрика, конфиг, Gemini с
+подменённым fetch), `http` (CORS, IP, лимитеры) и `handler` (весь флоу
+со стабом провайдера через DI); во фронте — `services/oracleApi` (успех, коды ошибок, `retry_after` из тела и заголовка) и `services/oracleErrors` (склонения, `retry`-тексты). Те же команды гоняются в CI до деплоя.
