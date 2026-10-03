@@ -15,10 +15,10 @@ const { result, error, isLoading, isResting, retryIn, isBlocked, blockedError, a
         <p class="intro">Задай вопрос. Иногда ответ уже ждет,<br class="desktop-break"> когда ты его услышишь.</p>
       </header>
 
-      <OracleStatus v-if="isBlocked && !error" :error="blockedError" />
       <OracleForm :is-loading="isLoading" :is-resting="isResting" @ask="ask" />
       <OracleResult v-if="result" :result="result" />
       <OracleStatus v-if="error" :error="error" :retry-in="retryIn" />
+      <OracleStatus v-else-if="isBlocked" :error="blockedError" />
 
       <footer class="panel-footer">Ответы приходят тем, кто готов их принять</footer>
     </section>

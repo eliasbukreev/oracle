@@ -24,8 +24,11 @@ export type FetchImpl = typeof fetch;
  *  конкретная реализация (OpenRouter, Groq, ...) подставляется снаружи. */
 export interface OracleProvider {
   readonly name: string;
-  ask(question: string): Promise<OracleResponse | null>;
+  ask(question: string): Promise<ProviderAnswer>;
 }
+
+export type ProviderAnswer =
+  { ok: true; response: OracleResponse } | { ok: false; blocked: boolean };
 
 /** Минимальный контракт rate-лимитера. Реальный Cloudflare RateLimit
  *  биндинг удовлетворяет ему структурно, в тестах подсовывается фейк. */

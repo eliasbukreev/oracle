@@ -28,7 +28,10 @@ describe("OpenRouterProvider", () => {
       "Учить ли Rust?",
     );
 
-    expect(result).toMatchObject({ verdict: "ДА", confidence: 87 });
+    expect(result).toEqual({
+      ok: true,
+      response: JSON.parse(VALID_ORACLE_JSON),
+    });
     expect(seenUrl).toBe("https://openrouter.ai/api/v1/chat/completions");
     expect(seenHeaders?.get("Authorization")).toBe("Bearer test-key");
     expect(JSON.parse(seenBody)).toMatchObject({
@@ -53,7 +56,10 @@ describe("OpenRouterProvider", () => {
           }),
       ),
     );
-    expect(await provider.ask("Учить ли Rust?")).toBeNull();
+    expect(await provider.ask("Учить ли Rust?")).toEqual({
+      ok: false,
+      blocked: false,
+    });
   });
 
   it("логирует код, message и error_type из тела ошибки", async () => {
@@ -75,7 +81,10 @@ describe("OpenRouterProvider", () => {
       ),
     );
 
-    expect(await provider.ask("Учить ли Rust?")).toBeNull();
+    expect(await provider.ask("Учить ли Rust?")).toEqual({
+      ok: false,
+      blocked: true,
+    });
     expect(errorSpy).toHaveBeenCalledWith(
       "openrouter_http_error status=403 message=code=403 Request blocked type=permission_denied",
     );
@@ -93,7 +102,10 @@ describe("OpenRouterProvider", () => {
       ),
     );
 
-    expect(await provider.ask("Учить ли Rust?")).toBeNull();
+    expect(await provider.ask("Учить ли Rust?")).toEqual({
+      ok: false,
+      blocked: true,
+    });
     expect(errorSpy).toHaveBeenCalledWith(
       "openrouter_http_error status=403 message=flat failure",
     );
@@ -108,7 +120,10 @@ describe("OpenRouterProvider", () => {
       ),
     );
 
-    expect(await provider.ask("Учить ли Rust?")).toBeNull();
+    expect(await provider.ask("Учить ли Rust?")).toEqual({
+      ok: false,
+      blocked: true,
+    });
     expect(errorSpy).toHaveBeenCalledWith(
       "openrouter_http_error status=403 message=<html>blocked</html>",
     );
@@ -121,7 +136,10 @@ describe("OpenRouterProvider", () => {
       fakeFetch(() => new Response("", { status: 403 })),
     );
 
-    expect(await provider.ask("Учить ли Rust?")).toBeNull();
+    expect(await provider.ask("Учить ли Rust?")).toEqual({
+      ok: false,
+      blocked: true,
+    });
     expect(errorSpy).toHaveBeenCalledWith(
       "openrouter_http_error status=403 message=unknown",
     );
@@ -132,7 +150,10 @@ describe("OpenRouterProvider", () => {
       validConfig(),
       fakeFetch(() => openRouterOk('{"verdict":"ДА"}')),
     );
-    expect(await provider.ask("Учить ли Rust?")).toBeNull();
+    expect(await provider.ask("Учить ли Rust?")).toEqual({
+      ok: false,
+      blocked: false,
+    });
   });
 
   it("возвращает null при пустом content", async () => {
@@ -140,7 +161,10 @@ describe("OpenRouterProvider", () => {
       validConfig(),
       fakeFetch(() => openRouterOk(null)),
     );
-    expect(await provider.ask("Учить ли Rust?")).toBeNull();
+    expect(await provider.ask("Учить ли Rust?")).toEqual({
+      ok: false,
+      blocked: false,
+    });
   });
 
   it("возвращает null при сетевой ошибке", async () => {
@@ -148,7 +172,10 @@ describe("OpenRouterProvider", () => {
       throw new TypeError("network down");
     }) as unknown as FetchImpl;
     const provider = createOpenRouterProvider(validConfig(), fetchImpl);
-    expect(await provider.ask("Учить ли Rust?")).toBeNull();
+    expect(await provider.ask("Учить ли Rust?")).toEqual({
+      ok: false,
+      blocked: false,
+    });
   });
 
   it("200 с нечитаемым телом логирует response_unreadable", async () => {
@@ -158,7 +185,10 @@ describe("OpenRouterProvider", () => {
       fakeFetch(() => new Response("", { status: 200 })),
     );
 
-    expect(await provider.ask("Учить ли Rust?")).toBeNull();
+    expect(await provider.ask("Учить ли Rust?")).toEqual({
+      ok: false,
+      blocked: false,
+    });
     expect(errorSpy).toHaveBeenCalledWith("openrouter_response_unreadable");
     expect(errorSpy).not.toHaveBeenCalledWith(
       expect.stringContaining("openrouter_request_failed"),
@@ -172,10 +202,24 @@ describe("OpenRouterProvider", () => {
     }) as unknown as FetchImpl;
     const provider = createOpenRouterProvider(validConfig(), fetchImpl);
 
-    expect(await provider.ask("Учить ли Rust?")).toBeNull();
+    expect(await provider.ask("Учить ли Rust?")).toEqual({
+      ok: false,
+      blocked: false,
+    });
     expect(errorSpy).toHaveBeenCalledWith(
       "openrouter_request_failed type=TypeError message=fetch failed",
     );
+  });
+
+  it("403 помечает ответ как запрет", async () => {
+    const provider = createOpenRouterProvider(
+      validConfig(),
+      fakeFetch(() => new Response("forbidden", { status: 403 })),
+    );
+    expect(await provider.ask("Учить ли Rust?")).toEqual({
+      ok: false,
+      blocked: true,
+    });
   });
 
   it("вызывает fetch без receiver (строгость workerd)", async () => {
@@ -183,8 +227,9 @@ describe("OpenRouterProvider", () => {
       validConfig(),
       strictFetch(() => openRouterOk(VALID_ORACLE_JSON)),
     );
-    expect(await provider.ask("Учить ли Rust?")).toMatchObject({
-      verdict: "ДА",
+    expect(await provider.ask("Учить ли Rust?")).toEqual({
+      ok: true,
+      response: JSON.parse(VALID_ORACLE_JSON),
     });
   });
 });

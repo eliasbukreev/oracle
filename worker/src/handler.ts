@@ -67,8 +67,15 @@ export async function handleAsk(
     return respond(request, deps, 400, { error: "invalid_request" });
   }
 
-  const result = await deps.provider.ask(question);
-  return result
-    ? respond(request, deps, 200, result)
-    : respond(request, deps, 502, { error: "oracle_unavailable" });
+  const answer = await deps.provider.ask(question);
+
+  if (answer.ok) {
+    return respond(request, deps, 200, answer.response);
+  }
+
+  if (answer.blocked) {
+    return respond(request, deps, 403, { error: "blocked" });
+  }
+
+  return respond(request, deps, 502, { error: "oracle_unavailable" });
 }

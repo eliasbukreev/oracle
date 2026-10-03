@@ -156,6 +156,18 @@ describe("askOracle", () => {
     const error = (await captureError()) as OracleRequestError;
     expect(error.code).toBe("internal_error");
   });
+
+  it("403 с кодом blocked показывает VPN-экран", async () => {
+    mockFetchOnce({ error: "blocked" }, 403);
+    const error = (await captureError()) as OracleRequestError;
+    expect(error.code).toBe("blocked");
+  });
+
+  it("403 без тела маппится в blocked по статусу", async () => {
+    mockFetchOnce({}, 403);
+    const error = (await captureError()) as OracleRequestError;
+    expect(error.code).toBe("blocked");
+  });
 });
 
 describe("OracleRequestError", () => {

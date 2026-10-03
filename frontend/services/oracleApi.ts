@@ -69,13 +69,15 @@ function isOracleErrorCode(value: unknown): value is OracleErrorCode {
     value === "invalid_client" ||
     value === "oracle_resting" ||
     value === "oracle_unavailable" ||
-    value === "internal_error"
+    value === "internal_error" ||
+    value === "blocked"
   );
 }
 
 function errorCodeFromStatus(status: number): OracleErrorCode {
   if (status === 400) return "invalid_request";
   if (status === 401) return "invalid_client";
+  if (status === 403) return "blocked";
   if (status === 429) return "oracle_resting";
   if (status === 502) return "oracle_unavailable";
   return "internal_error";

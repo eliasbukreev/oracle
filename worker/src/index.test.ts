@@ -124,6 +124,44 @@ describe("worker fetch", () => {
     expect(seenUrls[1]).toContain("groq.com");
   });
 
+  it("fallback: при 403 от OpenRouter спрашивает Groq", async () => {
+    const seenUrls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string | URL | Request) => {
+        const url = String(input);
+        seenUrls.push(url);
+        return url.includes("groq")
+          ? chatOk()
+          : new Response("forbidden", { status: 403 });
+      }),
+    );
+
+    const res = await worker.fetch(
+      postRequest(),
+      makeEnv({ ORACLE_FALLBACK_PROVIDER: "groq" }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ verdict: "ДА" });
+    expect(seenUrls).toHaveLength(2);
+  });
+
+  it("запрет обоих провайдеров возвращает 403 blocked", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("forbidden", { status: 403 })),
+    );
+
+    const res = await worker.fetch(
+      postRequest(),
+      makeEnv({ ORACLE_FALLBACK_PROVIDER: "groq" }),
+    );
+
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: "blocked" });
+  });
+
   it("без fallback падает в 502 когда OpenRouter недоступен", async () => {
     const seenUrls: string[] = [];
     vi.stubGlobal(

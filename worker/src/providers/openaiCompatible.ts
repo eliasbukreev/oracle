@@ -3,7 +3,7 @@ import type {
   FetchImpl,
   OracleProvider,
   OracleProviderConfig,
-  OracleResponse,
+  ProviderAnswer,
 } from "../types";
 
 interface ChatCompletionsPayload {
@@ -88,7 +88,7 @@ export function createOpenAIChatProvider(
 ): OracleProvider {
   const { apiKey, model, maxOutputTokens, temperature, timeoutMs } = config;
 
-  async function ask(question: string): Promise<OracleResponse | null> {
+  async function ask(question: string): Promise<ProviderAnswer> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -120,7 +120,7 @@ export function createOpenAIChatProvider(
         console.error(
           `${kind}_http_error status=${apiResponse.status} message=${describeErrorBody(rawBody)}`,
         );
-        return null;
+        return { ok: false, blocked: apiResponse.status === 403 };
       }
 
       const payload = (await apiResponse
@@ -129,7 +129,7 @@ export function createOpenAIChatProvider(
 
       if (!payload) {
         console.error(`${kind}_response_unreadable`);
-        return null;
+        return { ok: false, blocked: false };
       }
 
       const content = payload.choices?.[0]?.message?.content;
@@ -138,14 +138,14 @@ export function createOpenAIChatProvider(
 
       if (!result) {
         console.error(`${kind}_response_invalid`);
-        return null;
+        return { ok: false, blocked: false };
       }
 
       console.log(`${kind}_response_validated`);
-      return result;
+      return { ok: true, response: result };
     } catch (error) {
       console.error(`${kind}_request_failed ${errorDetail(error)}`);
-      return null;
+      return { ok: false, blocked: false };
     } finally {
       clearTimeout(timeoutId);
     }

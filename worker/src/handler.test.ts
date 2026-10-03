@@ -3,22 +3,22 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RATE_LIMIT_WINDOW_SECONDS, handleAsk } from "./handler";
 import { MAX_QUESTION_LENGTH } from "./oracle";
-import type { OracleDeps, OracleProvider, OracleResponse } from "./types";
+import type { OracleDeps, OracleProvider, ProviderAnswer } from "./types";
 
-const PROPHECY: OracleResponse = {
+const PROPHECY = {
   verdict: "ДА",
   confidence: 87,
   prophecy: "Путь тернист, но цель близка.",
   reason: "Звёзды благоволят смелым.",
 };
 
-function stubProvider(result: OracleResponse | null): OracleProvider {
-  return { name: "stub", ask: async () => result };
+function stubProvider(answer: ProviderAnswer): OracleProvider {
+  return { name: "stub", ask: async () => answer };
 }
 
 function makeDeps(overrides: Partial<OracleDeps> = {}): OracleDeps {
   return {
-    provider: stubProvider(PROPHECY),
+    provider: stubProvider({ ok: true, response: PROPHECY }),
     corsAllowedOrigins: "http://localhost:3000",
     ...overrides,
   };
@@ -60,14 +60,16 @@ describe("handleAsk", () => {
     expect(await res.json()).toEqual({ error: "invalid_request" });
   });
 
-  it.each(["{oops", {}, { question: "   " }, { question: "x".repeat(MAX_QUESTION_LENGTH + 1) }])(
-    "невалидный вопрос возвращает 400: %s",
-    async (body) => {
-      const res = await handleAsk(postRequest(body), makeDeps());
-      expect(res.status).toBe(400);
-      expect(await res.json()).toEqual({ error: "invalid_request" });
-    },
-  );
+  it.each([
+    "{oops",
+    {},
+    { question: "   " },
+    { question: "x".repeat(MAX_QUESTION_LENGTH + 1) },
+  ])("невалидный вопрос возвращает 400: %s", async (body) => {
+    const res = await handleAsk(postRequest(body), makeDeps());
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "invalid_request" });
+  });
 
   it("превышение лимита возвращает 429 с retry_after", async () => {
     const perIp = { limit: vi.fn(async () => ({ success: false })) };
@@ -101,7 +103,7 @@ describe("handleAsk", () => {
   });
 
   it("успех: спрашивает провайдера триммированным вопросом", async () => {
-    const ask = vi.fn(async () => PROPHECY);
+    const ask = vi.fn(async () => ({ ok: true, response: PROPHECY }) as const);
     const res = await handleAsk(
       postRequest({ question: "  Учить ли Rust?  " }),
       makeDeps({ provider: { name: "stub", ask } }),
@@ -115,9 +117,18 @@ describe("handleAsk", () => {
   it("пустой ответ провайдера возвращает 502", async () => {
     const res = await handleAsk(
       postRequest({ question: "Учить ли Rust?" }),
-      makeDeps({ provider: stubProvider(null) }),
+      makeDeps({ provider: stubProvider({ ok: false, blocked: false }) }),
     );
     expect(res.status).toBe(502);
     expect(await res.json()).toEqual({ error: "oracle_unavailable" });
+  });
+
+  it("запрет провайдера возвращает 403 blocked", async () => {
+    const res = await handleAsk(
+      postRequest({ question: "Учить ли Rust?" }),
+      makeDeps({ provider: stubProvider({ ok: false, blocked: true }) }),
+    );
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: "blocked" });
   });
 });

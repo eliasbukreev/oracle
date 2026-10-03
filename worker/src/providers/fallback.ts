@@ -1,13 +1,13 @@
-import type { OracleProvider, OracleResponse } from "../types";
+import type { OracleProvider, ProviderAnswer } from "../types";
 
 export function createFallbackProvider(
   primary: OracleProvider,
   secondary: OracleProvider,
 ): OracleProvider {
-  async function ask(question: string): Promise<OracleResponse | null> {
+  async function ask(question: string): Promise<ProviderAnswer> {
     const first = await primary.ask(question);
 
-    if (first) {
+    if (first.ok) {
       return first;
     }
 

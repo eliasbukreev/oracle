@@ -24,7 +24,10 @@ describe("GroqProvider", () => {
       "Учить ли Rust?",
     );
 
-    expect(result).toMatchObject({ verdict: "ДА", confidence: 87 });
+    expect(result).toEqual({
+      ok: true,
+      response: JSON.parse(VALID_ORACLE_JSON),
+    });
     expect(seenUrl).toBe("https://api.groq.com/openai/v1/chat/completions");
     expect(seenHeaders?.get("Authorization")).toBe("Bearer test-key");
     expect(JSON.parse(seenBody)).toMatchObject({
@@ -49,7 +52,10 @@ describe("GroqProvider", () => {
           }),
       ),
     );
-    expect(await provider.ask("Учить ли Rust?")).toBeNull();
+    expect(await provider.ask("Учить ли Rust?")).toEqual({
+      ok: false,
+      blocked: false,
+    });
   });
 
   it("возвращает null при битом ответе модели", async () => {
@@ -57,7 +63,10 @@ describe("GroqProvider", () => {
       validConfig(),
       fakeFetch(() => groqOk('{"verdict":"ДА"}')),
     );
-    expect(await provider.ask("Учить ли Rust?")).toBeNull();
+    expect(await provider.ask("Учить ли Rust?")).toEqual({
+      ok: false,
+      blocked: false,
+    });
   });
 
   it("возвращает null при пустом content", async () => {
@@ -65,7 +74,10 @@ describe("GroqProvider", () => {
       validConfig(),
       fakeFetch(() => groqOk(null)),
     );
-    expect(await provider.ask("Учить ли Rust?")).toBeNull();
+    expect(await provider.ask("Учить ли Rust?")).toEqual({
+      ok: false,
+      blocked: false,
+    });
   });
 
   it("возвращает null при сетевой ошибке", async () => {
@@ -73,7 +85,21 @@ describe("GroqProvider", () => {
       throw new TypeError("network down");
     }) as unknown as FetchImpl;
     const provider = createGroqProvider(validConfig(), fetchImpl);
-    expect(await provider.ask("Учить ли Rust?")).toBeNull();
+    expect(await provider.ask("Учить ли Rust?")).toEqual({
+      ok: false,
+      blocked: false,
+    });
+  });
+
+  it("403 помечает ответ как запрет", async () => {
+    const provider = createGroqProvider(
+      validConfig(),
+      fakeFetch(() => new Response("forbidden", { status: 403 })),
+    );
+    expect(await provider.ask("Учить ли Rust?")).toEqual({
+      ok: false,
+      blocked: true,
+    });
   });
 
   it("вызывает fetch без receiver (строгость workerd)", async () => {
@@ -81,8 +107,9 @@ describe("GroqProvider", () => {
       validConfig(),
       strictFetch(() => groqOk(VALID_ORACLE_JSON)),
     );
-    expect(await provider.ask("Учить ли Rust?")).toMatchObject({
-      verdict: "ДА",
+    expect(await provider.ask("Учить ли Rust?")).toEqual({
+      ok: true,
+      response: JSON.parse(VALID_ORACLE_JSON),
     });
   });
 });
