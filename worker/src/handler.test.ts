@@ -1,7 +1,7 @@
 // Тесты оркестрации: провайдер подменяется стабом через DI,
 // сеть и Cloudflare не нужны.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { RATE_LIMIT_WINDOW_SECONDS, handleAsk } from "./handler";
+import { MAX_BODY_BYTES, RATE_LIMIT_WINDOW_SECONDS, handleAsk } from "./handler";
 import { MAX_QUESTION_LENGTH } from "./oracle";
 import type { OracleDeps, OracleProvider, ProviderAnswer } from "./types";
 
@@ -24,10 +24,21 @@ function makeDeps(overrides: Partial<OracleDeps> = {}): OracleDeps {
   };
 }
 
-function postRequest(body: unknown): Request {
-  return new Request("https://oracle.test/", {
+function postRequest(
+  body: unknown,
+  init: { url?: string; contentLength?: number } = {},
+): Request {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+
+  if (init.contentLength !== undefined) {
+    headers["Content-Length"] = String(init.contentLength);
+  }
+
+  return new Request(init.url ?? "https://oracle.test/", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: typeof body === "string" ? body : JSON.stringify(body),
   });
 }
@@ -58,6 +69,49 @@ describe("handleAsk", () => {
     );
     expect(res.status).toBe(405);
     expect(await res.json()).toEqual({ error: "invalid_request" });
+  });
+
+  it("чужой путь возвращает 400", async () => {
+    const res = await handleAsk(
+      postRequest(
+        { question: "Учить ли Rust?" },
+        { url: "https://oracle.test/api/ask" },
+      ),
+      makeDeps(),
+    );
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "invalid_request" });
+  });
+
+  it("гигантское тело отбрасывается до парсинга", async () => {
+    const res = await handleAsk(
+      postRequest(
+        { question: "Учить ли Rust?" },
+        { contentLength: MAX_BODY_BYTES + 1 },
+      ),
+      makeDeps(),
+    );
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: "invalid_request" });
+  });
+
+  it("тело на границе лимита проходит дальше", async () => {
+    const res = await handleAsk(
+      postRequest(
+        { question: "Учить ли Rust?" },
+        { contentLength: MAX_BODY_BYTES },
+      ),
+      makeDeps(),
+    );
+    expect(res.status).toBe(200);
+  });
+
+  it("без Content-Length пропускает к валидации", async () => {
+    const res = await handleAsk(
+      postRequest({ question: "Учить ли Rust?" }),
+      makeDeps(),
+    );
+    expect(res.status).toBe(200);
   });
 
   it.each([

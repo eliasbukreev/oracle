@@ -4,6 +4,10 @@ import type { OracleDeps } from "./types";
 
 export const RATE_LIMIT_WINDOW_SECONDS = 60;
 
+// Вопрос влезает в ~0.5 КБ, с JSON-обёрткой — в единицы килобайт.
+// Всё большее — попытка пожечь CPU/память парсингом, режем до лимита.
+export const MAX_BODY_BYTES = 8192;
+
 function respond(
   request: Request,
   deps: OracleDeps,
@@ -30,6 +34,17 @@ export async function handleAsk(
 
   if (request.method !== "POST") {
     return respond(request, deps, 405, { error: "invalid_request" });
+  }
+
+  // Оракул живёт только в корне: остальное — шум сканеров.
+  if (new URL(request.url).pathname !== "/") {
+    return respond(request, deps, 400, { error: "invalid_request" });
+  }
+
+  // Гигантские тела отбрасываем до парсинга и лимита.
+  const contentLength = Number(request.headers.get("Content-Length"));
+  if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {
+    return respond(request, deps, 400, { error: "invalid_request" });
   }
 
   let limitedScope;
