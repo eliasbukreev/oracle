@@ -21,7 +21,7 @@ export interface OracleProviderConfig {
 export type FetchImpl = typeof fetch;
 
 /** DI-контракт LLM-провайдера. Хендлер зависит только от него,
- *  конкретная реализация (Gemini, ...) подставляется снаружи. */
+ *  конкретная реализация (OpenRouter, Groq, ...) подставляется снаружи. */
 export interface OracleProvider {
   readonly name: string;
   ask(question: string): Promise<OracleResponse | null>;

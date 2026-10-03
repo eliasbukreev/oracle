@@ -1,4 +1,5 @@
 // Тесты composition root: Env → конфиг → провайдер(+fallback) → handleAsk.
+// Цепочка по умолчанию: OpenRouter primary + Groq fallback.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import worker, { type Env } from "./index";
 
@@ -11,8 +12,6 @@ const VALID_ORACLE_JSON = JSON.stringify({
 
 function makeEnv(overrides: Partial<Env> = {}): Env {
   return {
-    GEMINI_API_KEY: "gemini-key",
-    GEMINI_MODEL: "gemini-model",
     OPENROUTER_API_KEY: "openrouter-key",
     OPENROUTER_MODEL: "openrouter-model",
     GROQ_API_KEY: "groq-key",
@@ -33,14 +32,7 @@ function postRequest(): Request {
   });
 }
 
-function geminiOk(): Response {
-  const payload = {
-    candidates: [{ content: { parts: [{ text: VALID_ORACLE_JSON }] } }],
-  };
-  return new Response(JSON.stringify(payload), { status: 200 });
-}
-
-function openRouterOk(): Response {
+function chatOk(): Response {
   const payload = {
     choices: [{ message: { role: "assistant", content: VALID_ORACLE_JSON } }],
   };
@@ -62,7 +54,7 @@ describe("worker fetch", () => {
   it("OPTIONS отвечает 204 даже с битым конфигом", async () => {
     const res = await worker.fetch(
       new Request("https://oracle.test/", { method: "OPTIONS" }),
-      makeEnv({ GEMINI_API_KEY: "   ", GEMINI_MODEL: "" }),
+      makeEnv({ OPENROUTER_API_KEY: "   ", OPENROUTER_MODEL: "" }),
     );
     expect(res.status).toBe(204);
   });
@@ -70,19 +62,19 @@ describe("worker fetch", () => {
   it("не-POST отвечает 405 даже с битым конфигом", async () => {
     const res = await worker.fetch(
       new Request("https://oracle.test/", { method: "GET" }),
-      makeEnv({ GEMINI_API_KEY: "   ", GEMINI_MODEL: "" }),
+      makeEnv({ OPENROUTER_API_KEY: "   ", OPENROUTER_MODEL: "" }),
     );
     expect(res.status).toBe(405);
     expect(await res.json()).toEqual({ error: "invalid_request" });
   });
 
-  it("по умолчанию отвечает через Gemini", async () => {
+  it("по умолчанию отвечает через OpenRouter", async () => {
     let seenUrl = "";
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: string | URL | Request) => {
         seenUrl = String(input);
-        return geminiOk();
+        return chatOk();
       }),
     );
 
@@ -90,7 +82,7 @@ describe("worker fetch", () => {
 
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ verdict: "ДА" });
-    expect(seenUrl).toContain("generativelanguage.googleapis.com");
+    expect(seenUrl).toContain("openrouter.ai");
   });
 
   it("невалидный конфиг отвечает 502 без выхода в сеть", async () => {
@@ -99,7 +91,7 @@ describe("worker fetch", () => {
 
     const res = await worker.fetch(
       postRequest(),
-      makeEnv({ GEMINI_API_KEY: "   " }),
+      makeEnv({ OPENROUTER_API_KEY: "   " }),
     );
 
     expect(res.status).toBe(502);
@@ -107,32 +99,32 @@ describe("worker fetch", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("fallback: при 500 от Gemini спрашивает OpenRouter", async () => {
+  it("fallback: при 500 от OpenRouter спрашивает Groq", async () => {
     const seenUrls: string[] = [];
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: string | URL | Request) => {
         const url = String(input);
         seenUrls.push(url);
-        return url.includes("openrouter")
-          ? openRouterOk()
+        return url.includes("groq")
+          ? chatOk()
           : new Response("{}", { status: 500 });
       }),
     );
 
     const res = await worker.fetch(
       postRequest(),
-      makeEnv({ ORACLE_FALLBACK_PROVIDER: "openrouter" }),
+      makeEnv({ ORACLE_FALLBACK_PROVIDER: "groq" }),
     );
 
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ verdict: "ДА" });
     expect(seenUrls).toHaveLength(2);
-    expect(seenUrls[0]).toContain("generativelanguage.googleapis.com");
-    expect(seenUrls[1]).toContain("openrouter.ai");
+    expect(seenUrls[0]).toContain("openrouter.ai");
+    expect(seenUrls[1]).toContain("groq.com");
   });
 
-  it("без fallback падает в 502 когда Gemini недоступен", async () => {
+  it("без fallback падает в 502 когда OpenRouter недоступен", async () => {
     const seenUrls: string[] = [];
     vi.stubGlobal(
       "fetch",
@@ -151,14 +143,14 @@ describe("worker fetch", () => {
   it("битый fallback-конфиг не ломает primary", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => geminiOk()),
+      vi.fn(async () => chatOk()),
     );
 
     const res = await worker.fetch(
       postRequest(),
       makeEnv({
-        ORACLE_FALLBACK_PROVIDER: "openrouter",
-        OPENROUTER_API_KEY: "   ",
+        ORACLE_FALLBACK_PROVIDER: "groq",
+        GROQ_API_KEY: "   ",
       }),
     );
 

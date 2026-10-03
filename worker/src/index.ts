@@ -5,10 +5,9 @@
 //   общие параметры генерации — ORACLE_TEMPERATURE, ORACLE_MAX_TOKENS,
 //   ORACLE_TIMEOUT (одинаковы для всех провайдеров);
 //   своё у каждого провайдера — только ключ и модель:
-//   GEMINI_API_KEY (secret) + GEMINI_MODEL,
 //   OPENROUTER_API_KEY (secret) + OPENROUTER_MODEL,
 //   GROQ_API_KEY (secret) + GROQ_MODEL.
-// Выбор: ORACLE_PROVIDER — primary (дефолт "gemini"),
+// Выбор: ORACLE_PROVIDER — primary (дефолт "openrouter"),
 // ORACLE_FALLBACK_PROVIDER — secondary (пусто = без fallback).
 //
 // Бизнес-логика:   oracle.ts (домен), providers/* (LLM), handler.ts (оркестрация)
@@ -17,7 +16,6 @@ import { handleAsk } from "./handler";
 import { jsonResponse } from "./http";
 import {
   DEFAULT_PROVIDER,
-  PROVIDER_GEMINI,
   PROVIDER_GROQ,
   PROVIDER_OPENROUTER,
   createProvider,
@@ -27,8 +25,6 @@ import { createFallbackProvider } from "./providers/fallback";
 import type { OracleProvider } from "./types";
 
 export interface Env {
-  GEMINI_API_KEY: string;
-  GEMINI_MODEL: string;
   OPENROUTER_API_KEY: string;
   OPENROUTER_MODEL: string;
   GROQ_API_KEY: string;
@@ -58,10 +54,6 @@ function providerCredentials(
   kind: string,
   env: Env,
 ): { apiKey: string; model: string } | null {
-  if (kind === PROVIDER_GEMINI) {
-    return { apiKey: env.GEMINI_API_KEY ?? "", model: env.GEMINI_MODEL ?? "" };
-  }
-
   if (kind === PROVIDER_OPENROUTER) {
     return {
       apiKey: env.OPENROUTER_API_KEY ?? "",
