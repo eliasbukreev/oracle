@@ -6,7 +6,8 @@
 //   ORACLE_TIMEOUT (одинаковы для всех провайдеров);
 //   своё у каждого провайдера — только ключ и модель:
 //   GEMINI_API_KEY (secret) + GEMINI_MODEL,
-//   OPENROUTER_API_KEY (secret) + OPENROUTER_MODEL.
+//   OPENROUTER_API_KEY (secret) + OPENROUTER_MODEL,
+//   GROQ_API_KEY (secret) + GROQ_MODEL.
 // Выбор: ORACLE_PROVIDER — primary (дефолт "gemini"),
 // ORACLE_FALLBACK_PROVIDER — secondary (пусто = без fallback).
 //
@@ -17,6 +18,7 @@ import { jsonResponse } from "./http";
 import {
   DEFAULT_PROVIDER,
   PROVIDER_GEMINI,
+  PROVIDER_GROQ,
   PROVIDER_OPENROUTER,
   createProvider,
   createProviderConfig,
@@ -29,6 +31,8 @@ export interface Env {
   GEMINI_MODEL: string;
   OPENROUTER_API_KEY: string;
   OPENROUTER_MODEL: string;
+  GROQ_API_KEY: string;
+  GROQ_MODEL: string;
   ORACLE_MAX_TOKENS: string;
   ORACLE_TEMPERATURE: string;
   ORACLE_TIMEOUT: string;
@@ -63,6 +67,10 @@ function providerCredentials(
       apiKey: env.OPENROUTER_API_KEY ?? "",
       model: env.OPENROUTER_MODEL ?? "",
     };
+  }
+
+  if (kind === PROVIDER_GROQ) {
+    return { apiKey: env.GROQ_API_KEY ?? "", model: env.GROQ_MODEL ?? "" };
   }
 
   console.error(`unknown_oracle_provider kind=${kind}`);

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_PROVIDER,
   PROVIDER_GEMINI,
+  PROVIDER_GROQ,
   PROVIDER_OPENROUTER,
   createProvider,
   createProviderConfig,
@@ -64,6 +65,12 @@ describe("createProvider", () => {
   it("создаёт OpenRouterProvider", () => {
     const provider = createProvider(PROVIDER_OPENROUTER, validConfig());
     expect(provider.name).toBe("openrouter");
+    expect(typeof provider.ask).toBe("function");
+  });
+
+  it("создаёт GroqProvider", () => {
+    const provider = createProvider(PROVIDER_GROQ, validConfig());
+    expect(provider.name).toBe("groq");
     expect(typeof provider.ask).toBe("function");
   });
 

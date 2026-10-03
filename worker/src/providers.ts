@@ -1,12 +1,13 @@
 // Выбор LLM-провайдера (DI-фабрика) и парсинг общего конфига.
 import { createGeminiProvider, PROVIDER_GEMINI } from "./providers/gemini";
+import { createGroqProvider, PROVIDER_GROQ } from "./providers/groq";
 import {
   createOpenRouterProvider,
   PROVIDER_OPENROUTER,
 } from "./providers/openrouter";
 import type { FetchImpl, OracleProvider, OracleProviderConfig } from "./types";
 
-export { PROVIDER_GEMINI, PROVIDER_OPENROUTER };
+export { PROVIDER_GEMINI, PROVIDER_GROQ, PROVIDER_OPENROUTER };
 
 const DEFAULT_TIMEOUT_MS = 20_000;
 
@@ -23,6 +24,10 @@ export function createProvider(
 
   if (kind === PROVIDER_OPENROUTER) {
     return createOpenRouterProvider(config, fetchImpl);
+  }
+
+  if (kind === PROVIDER_GROQ) {
+    return createGroqProvider(config, fetchImpl);
   }
 
   throw new Error(`unknown_oracle_provider kind=${kind}`);

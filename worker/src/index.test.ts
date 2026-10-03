@@ -15,6 +15,8 @@ function makeEnv(overrides: Partial<Env> = {}): Env {
     GEMINI_MODEL: "gemini-model",
     OPENROUTER_API_KEY: "openrouter-key",
     OPENROUTER_MODEL: "openrouter-model",
+    GROQ_API_KEY: "groq-key",
+    GROQ_MODEL: "groq-model",
     ORACLE_MAX_TOKENS: "800",
     ORACLE_TEMPERATURE: "0.8",
     ORACLE_TIMEOUT: "20",

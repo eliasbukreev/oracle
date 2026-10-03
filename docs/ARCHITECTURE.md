@@ -48,7 +48,9 @@ src/types.ts               # контракты: OracleResponse, OracleProvider,
 src/oracle.ts              # чистый домен: валидация вопроса/ответа, промпт, парсинг
 src/providers.ts           # фабрика createProvider + общий парсинг конфига
 src/providers/gemini.ts    # GeminiProvider (прямой Gemini API)
-src/providers/openrouter.ts # OpenRouterProvider (OpenAI-совместимый chat/completions)
+src/providers/openrouter.ts # OpenRouterProvider (тонкая обёртка)
+src/providers/groq.ts      # GroqProvider (тонкая обёртка)
+src/providers/openaiCompatible.ts # общий chat/completions: Bearer, messages, response_format json_object
 src/providers/fallback.ts  # FallbackProvider: primary → secondary при пустом ответе
 src/http.ts                # Cloudflare-адаптер: CORS, JSON-ответы, clientIp, rate-limit
 src/handler.ts             # оркестрация handleAsk(request, deps)
@@ -88,6 +90,8 @@ src/index.ts               # composition root: Env → конфиги → про
 | `GEMINI_MODEL` | var | идентификатор модели Gemini |
 | `OPENROUTER_API_KEY` | secret (`wrangler secret put`) | ключ OpenRouter |
 | `OPENROUTER_MODEL` | var | идентификатор модели OpenRouter (`vendor/model`) |
+| `GROQ_API_KEY` | secret (`wrangler secret put`) | ключ Groq |
+| `GROQ_MODEL` | var | идентификатор модели Groq |
 | `ORACLE_PROVIDER` | var (опц.) | primary-провайдер, дефолт `gemini` |
 | `ORACLE_FALLBACK_PROVIDER` | var (опц.) | fallback-провайдер, пусто = выключен |
 | `ORACLE_MAX_TOKENS` | var | лимит токенов ответа |
@@ -103,7 +107,7 @@ src/index.ts               # composition root: Env → конфиги → про
 2. `frontend`: `npm ci`, `npm run lint`, `npm run typecheck` (`nuxt prepare` + `vue-tsc`), `npm run test` (vitest), затем `nuxt generate` с `NUXT_APP_BASE_URL` и `NUXT_PUBLIC_ORACLE_API_URL` (из `vars.CLOUDFLARE_WORKER_URL`), загрузка артефакта Pages.
 3. `deploy-pages`: публикация на GitHub Pages. Только на `push`.
 
-Нужные GitHub Secrets/Vars: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `GEMINI_API_KEY`, `GEMINI_MODEL`, `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `ORACLE_PROVIDER`, `ORACLE_FALLBACK_PROVIDER` (`openrouter` для связки gemini → openrouter), `ORACLE_MAX_TOKENS`, `ORACLE_TEMPERATURE`, `ORACLE_TIMEOUT`, `CORS_ALLOWED_ORIGINS`, `CLOUDFLARE_WORKER_URL`.
+Нужные GitHub Secrets/Vars: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `GEMINI_API_KEY`, `GEMINI_MODEL`, `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `GROQ_API_KEY`, `GROQ_MODEL`, `ORACLE_PROVIDER`, `ORACLE_FALLBACK_PROVIDER` (`groq` для связки gemini → groq), `ORACLE_MAX_TOKENS`, `ORACLE_TEMPERATURE`, `ORACLE_TIMEOUT`, `CORS_ALLOWED_ORIGINS`, `CLOUDFLARE_WORKER_URL`.
 
 ## Ошибки API
 
