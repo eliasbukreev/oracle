@@ -10,15 +10,6 @@ const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
 export const PROVIDER_OPENROUTER = "openrouter";
 
-/** Безопасная для логов строка из исключения (только тип и сообщение,
- *  значений секретов здесь нет — ключ уходит лишь в заголовок). */
-function errorDetail(error: unknown): string {
-  const type = error instanceof Error ? error.name : "unknown";
-  const message =
-    error instanceof Error ? error.message.slice(0, 300) : "unknown";
-  return `type=${type} message=${message}`;
-}
-
 interface OpenRouterErrorPayload {
   error?: {
     code?: unknown;
@@ -45,21 +36,20 @@ function errorMessage(payload: unknown): string {
   return "unknown";
 }
 
-export class OpenRouterProvider implements OracleProvider {
-  readonly name = PROVIDER_OPENROUTER;
+function errorDetail(error: unknown): string {
+  const type = error instanceof Error ? error.name : "unknown";
+  const message =
+    error instanceof Error ? error.message.slice(0, 300) : "unknown";
+  return `type=${type} message=${message}`;
+}
 
-  private readonly config: OracleProviderConfig;
-  private readonly fetchImpl: FetchImpl;
+export function createOpenRouterProvider(
+  config: OracleProviderConfig,
+  fetchImpl: FetchImpl = fetch,
+): OracleProvider {
+  const { apiKey, model, maxOutputTokens, temperature, timeoutMs } = config;
 
-  constructor(config: OracleProviderConfig, fetchImpl: FetchImpl = fetch) {
-    this.config = config;
-    this.fetchImpl = fetchImpl;
-  }
-
-  async ask(question: string): Promise<OracleResponse | null> {
-    const { apiKey, model, maxOutputTokens, temperature, timeoutMs } =
-      this.config;
-
+  async function ask(question: string): Promise<OracleResponse | null> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -68,7 +58,7 @@ export class OpenRouterProvider implements OracleProvider {
         `openrouter_request_started model=${model} question_length=${question.length}`,
       );
 
-      const openRouterResponse = await this.fetchImpl(OPENROUTER_URL, {
+      const openRouterResponse = await fetchImpl(OPENROUTER_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -121,4 +111,6 @@ export class OpenRouterProvider implements OracleProvider {
       clearTimeout(timeoutId);
     }
   }
+
+  return { name: PROVIDER_OPENROUTER, ask };
 }

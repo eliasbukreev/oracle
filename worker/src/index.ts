@@ -21,7 +21,7 @@ import {
   createProvider,
   createProviderConfig,
 } from "./providers";
-import { FallbackProvider } from "./providers/fallback";
+import { createFallbackProvider } from "./providers/fallback";
 import type { OracleProvider } from "./types";
 
 export interface Env {
@@ -131,7 +131,7 @@ export default {
         if (!secondary) {
           console.error(`fallback_unavailable kind=${fallbackKind}`);
         } else {
-          provider = new FallbackProvider(primary, secondary);
+          provider = createFallbackProvider(primary, secondary);
         }
       }
     }

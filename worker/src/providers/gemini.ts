@@ -10,10 +10,6 @@ const GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models";
 
 export const PROVIDER_GEMINI = "gemini";
 
-/** Вытаскивает из исключения безопасную для логов строку.
- *  Ключ у Gemini живёт в query (`?key=`), поэтому на всякий случай
- *  затираем его значение: тексты сетевых ошибок его содержать не должны,
- *  но секрет дороже паранойи. */
 function errorDetail(error: unknown): string {
   const type = error instanceof Error ? error.name : "unknown";
   const message =
@@ -21,21 +17,13 @@ function errorDetail(error: unknown): string {
   return `type=${type} message=${message.replace(/key=[^&\s]*/g, "key=***")}`;
 }
 
-export class GeminiProvider implements OracleProvider {
-  readonly name = PROVIDER_GEMINI;
+export function createGeminiProvider(
+  config: OracleProviderConfig,
+  fetchImpl: FetchImpl = fetch,
+): OracleProvider {
+  const { apiKey, model, maxOutputTokens, temperature, timeoutMs } = config;
 
-  private readonly config: OracleProviderConfig;
-  private readonly fetchImpl: FetchImpl;
-
-  constructor(config: OracleProviderConfig, fetchImpl: FetchImpl = fetch) {
-    this.config = config;
-    this.fetchImpl = fetchImpl;
-  }
-
-  async ask(question: string): Promise<OracleResponse | null> {
-    const { apiKey, model, maxOutputTokens, temperature, timeoutMs } =
-      this.config;
-
+  async function ask(question: string): Promise<OracleResponse | null> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     const url = `${GEMINI_URL}/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
@@ -45,7 +33,7 @@ export class GeminiProvider implements OracleProvider {
         `gemini_request_started model=${model} question_length=${question.length}`,
       );
 
-      const geminiResponse = await this.fetchImpl(url, {
+      const geminiResponse = await fetchImpl(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -68,17 +56,15 @@ export class GeminiProvider implements OracleProvider {
         const errorPayload = (await geminiResponse
           .json()
           .catch(() => null)) as {
-          error?: { message?: string };
-        } | null;
+            error?: { message?: string };
+          } | null;
         console.error(
           `gemini_http_error status=${geminiResponse.status} message=${errorPayload?.error?.message?.slice(0, 300) ?? "unknown"}`,
         );
         return null;
       }
 
-      const payload = await geminiResponse
-        .json()
-        .catch(() => null) as {
+      const payload = (await geminiResponse.json().catch(() => null)) as {
         candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
       } | null;
 
@@ -105,4 +91,6 @@ export class GeminiProvider implements OracleProvider {
       clearTimeout(timeoutId);
     }
   }
+
+  return { name: PROVIDER_GEMINI, ask };
 }

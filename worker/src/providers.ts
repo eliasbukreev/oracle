@@ -1,9 +1,7 @@
 // Выбор LLM-провайдера (DI-фабрика) и парсинг общего конфига.
-// Сами реализации лежат рядом: providers/gemini.ts, providers/openrouter.ts.
-// Новый провайдер = новый файл + одна ветка в createProvider.
-import { GeminiProvider, PROVIDER_GEMINI } from "./providers/gemini";
+import { createGeminiProvider, PROVIDER_GEMINI } from "./providers/gemini";
 import {
-  OpenRouterProvider,
+  createOpenRouterProvider,
   PROVIDER_OPENROUTER,
 } from "./providers/openrouter";
 import type { FetchImpl, OracleProvider, OracleProviderConfig } from "./types";
@@ -20,11 +18,11 @@ export function createProvider(
   fetchImpl?: FetchImpl,
 ): OracleProvider {
   if (kind === PROVIDER_GEMINI) {
-    return new GeminiProvider(config, fetchImpl);
+    return createGeminiProvider(config, fetchImpl);
   }
 
   if (kind === PROVIDER_OPENROUTER) {
-    return new OpenRouterProvider(config, fetchImpl);
+    return createOpenRouterProvider(config, fetchImpl);
   }
 
   throw new Error(`unknown_oracle_provider kind=${kind}`);
