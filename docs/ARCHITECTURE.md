@@ -29,8 +29,9 @@ docs/       # документация
 - `components/OracleForm.vue` — ввод вопроса
 - `components/OracleResult.vue` — показ ответа
 - `components/OracleStatus.vue` — показ ошибки
-- `composables/useOracle.ts` — состояние `result / error / isLoading`
-- `services/oracleApi.ts` — `POST { question }` на URL воркера
+- `composables/useOracle.ts` — состояние `result / error / isLoading / isBlocked`
+- `services/oracleApi.ts` — `POST { question }` на URL воркера (таймаут 40с)
+- `services/connectivity.ts` — probe связи лёгким `OPTIONS` (15с), перепроверка каждые 30с
 - `types/oracle.ts` — типы ответа и ошибок
 - `nuxt.config.ts` — `oracleApiUrl` из `NUXT_PUBLIC_ORACLE_API_URL`, `baseURL` из `NUXT_APP_BASE_URL`
 
@@ -113,7 +114,14 @@ src/index.ts               # composition root: Env → конфиги → про
 405 invalid_request     # не-POST метод
 429 oracle_resting      # превышен rate limit, повтор через retry_after секунд
 502 oracle_unavailable  # провайдеры недоступны, неверный конфиг, ошибка rate-limit биндинга или ответ модели не прошёл валидацию
+(none) blocked         # только фронт: воркер молчит дольше таймаута — сеть глушат, подсказка про VPN
 ```
+
+Код `blocked` бэкенд никогда не шлёт: его ставит фронт, когда нет вообще
+никакого HTTP-ответа. При монтировании страницы идёт тихий `OPTIONS`-probe
+(воркер отвечает `204` до rate-limit и LLM — бесплатно); тишина 15с поднимает
+баннер «Сигнал не проходит», перепроверка каждые 30с гасит его сама. Ask-запрос
+ждёт до 40с (больше воркерских 30с, чтобы не путать медленный LLM с глушением).
 
 Внутренние детали (статусы провайдера, тексты ошибок, стек-трейсы) наружу не отдаются, в логи пишутся краткие коды (`openrouter_http_error`, `groq_response_invalid` и т.п.).
 

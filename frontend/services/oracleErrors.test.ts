@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  errorMessages,
   formatRetryAfter,
   pluralize,
   restingMessage,
@@ -28,6 +29,7 @@ describe("toErrorCode", () => {
   it("пропускает известные коды", () => {
     expect(toErrorCode("oracle_resting")).toBe("oracle_resting");
     expect(toErrorCode("invalid_request")).toBe("invalid_request");
+    expect(toErrorCode("blocked")).toBe("blocked");
   });
 
   it.each(["weird", null, undefined, 42, {}])(
@@ -53,8 +55,13 @@ describe("formatRetryAfter", () => {
   });
 });
 
-describe("restingMessage", () => {
-  it("без retryAfter возвращает дефолтный текст", () => {
+describe("blocked message", () => {
+  it("подсказывает VPN", () => {
+    expect(errorMessages.blocked).toContain("VPN");
+  });
+});
+
+describe("restingMessage", () => {  it("без retryAfter возвращает дефолтный текст", () => {
     expect(restingMessage()).toBe(
       "Оракул отдыхает. Дай ему немного тишины и попробуй позже.",
     );

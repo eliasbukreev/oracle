@@ -1,5 +1,6 @@
 import type { OracleError, OracleResponse } from "~/types/oracle";
 import { OracleRequestError, askOracle } from "~/services/oracleApi";
+import { RECHECK_INTERVAL_MS, checkConnection } from "~/services/connectivity";
 import {
   errorMessages,
   restingMessage,
@@ -13,6 +14,11 @@ export function useOracle() {
   const isLoading = ref(false);
   const retryIn = ref(0);
   const isResting = computed(() => error.value?.code === "oracle_resting");
+  const isBlocked = ref(false);
+  const blockedError = computed<OracleError>(() => ({
+    code: "blocked",
+    message: errorMessages.blocked,
+  }));
 
   let retryTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -47,7 +53,43 @@ export function useOracle() {
     }, 1000);
   }
 
-  onUnmounted(stopRetryCountdown);
+  onUnmounted(() => {
+    stopRetryCountdown();
+    stopRecheck();
+  });
+
+  let recheckTimer: ReturnType<typeof setInterval> | null = null;
+
+  function stopRecheck() {
+    if (recheckTimer !== null) {
+      clearInterval(recheckTimer);
+      recheckTimer = null;
+    }
+  }
+
+  // Тихая проба связи: воркер отвечает 204 до rate-limit и LLM,
+  async function probe() {
+    const apiUrl = config.public.oracleApiUrl;
+
+    if (!apiUrl) {
+      return;
+    }
+
+    const reachable = await checkConnection(apiUrl);
+    isBlocked.value = !reachable;
+
+    if (!reachable && recheckTimer === null) {
+      recheckTimer = setInterval(async () => {
+        if (await checkConnection(apiUrl)) {
+          isBlocked.value = false;
+          stopRecheck();
+        }
+      }, RECHECK_INTERVAL_MS);
+    }
+  }
+
+  // onMounted выполняется только на клиенте — SSR пробу не шлёт.
+  onMounted(probe);
 
   async function ask(question: string) {
     const trimmedQuestion = question.trim();
@@ -66,6 +108,10 @@ export function useOracle() {
         trimmedQuestion,
         config.public.oracleApiUrl,
       );
+
+      // Раз ответ пришёл — сигнал проходит, баннер гасим.
+      isBlocked.value = false;
+      stopRecheck();
     } catch (caughtError) {
       const requestError =
         caughtError instanceof OracleRequestError ? caughtError : null;
@@ -95,5 +141,14 @@ export function useOracle() {
     }
   }
 
-  return { result, error, isLoading, isResting, retryIn, ask };
+  return {
+    result,
+    error,
+    isLoading,
+    isResting,
+    retryIn,
+    isBlocked,
+    blockedError,
+    ask,
+  };
 }

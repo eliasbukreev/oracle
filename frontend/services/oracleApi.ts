@@ -1,4 +1,5 @@
 import type { OracleErrorCode, OracleResponse } from "~/types/oracle";
+import { ASK_TIMEOUT_MS } from "~/services/connectivity";
 
 type ApiErrorResponse = {
   error?: unknown;
@@ -83,10 +84,14 @@ function errorCodeFromStatus(status: number): OracleErrorCode {
 export async function askOracle(
   question: string,
   apiUrl: string,
+  timeoutMs: number = ASK_TIMEOUT_MS,
 ): Promise<OracleResponse> {
   if (!apiUrl) {
     throw new OracleRequestError("internal_error");
   }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   let response: Response;
 
@@ -97,9 +102,12 @@ export async function askOracle(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ question }),
+      signal: controller.signal,
     });
   } catch {
-    throw new OracleRequestError("oracle_unavailable");
+    throw new OracleRequestError("blocked");
+  } finally {
+    clearTimeout(timeoutId);
   }
 
   let payload: unknown;

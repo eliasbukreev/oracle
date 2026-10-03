@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { result, error, isLoading, isResting, retryIn, ask } = useOracle()
+const { result, error, isLoading, isResting, retryIn, isBlocked, blockedError, ask } = useOracle()
 </script>
 
 <template>
@@ -15,6 +15,7 @@ const { result, error, isLoading, isResting, retryIn, ask } = useOracle()
         <p class="intro">Задай вопрос. Иногда ответ уже ждет,<br class="desktop-break"> когда ты его услышишь.</p>
       </header>
 
+      <OracleStatus v-if="isBlocked && !error" :error="blockedError" />
       <OracleForm :is-loading="isLoading" :is-resting="isResting" @ask="ask" />
       <OracleResult v-if="result" :result="result" />
       <OracleStatus v-if="error" :error="error" :retry-in="retryIn" />

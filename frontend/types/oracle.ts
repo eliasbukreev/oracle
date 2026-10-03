@@ -11,6 +11,7 @@ export type OracleErrorCode =
   | 'oracle_resting'
   | 'oracle_unavailable'
   | 'internal_error'
+  | 'blocked'
 
 export type OracleError = {
   code: OracleErrorCode

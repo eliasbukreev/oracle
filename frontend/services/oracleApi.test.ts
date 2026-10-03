@@ -17,14 +17,15 @@ function mockFetchOnce(
 ): void {
   vi.stubGlobal(
     "fetch",
-    vi.fn(async () =>
-      new Response(
-        typeof payload === "string" ? payload : JSON.stringify(payload),
-        {
-          status,
-          headers: { "Content-Type": "application/json", ...headers },
-        },
-      ),
+    vi.fn(
+      async () =>
+        new Response(
+          typeof payload === "string" ? payload : JSON.stringify(payload),
+          {
+            status,
+            headers: { "Content-Type": "application/json", ...headers },
+          },
+        ),
     ),
   );
 }
@@ -74,12 +75,15 @@ describe("askOracle", () => {
   it("бросает internal_error без apiUrl и не ходит в сеть", async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
-    const error = (await captureError("Учить ли Rust?", "")) as OracleRequestError;
+    const error = (await captureError(
+      "Учить ли Rust?",
+      "",
+    )) as OracleRequestError;
     expect(error.code).toBe("internal_error");
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("бросает oracle_unavailable при сетевой ошибке", async () => {
+  it("бросает blocked при сетевой ошибке — сигнала нет", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () => {
@@ -87,7 +91,30 @@ describe("askOracle", () => {
       }),
     );
     const error = (await captureError()) as OracleRequestError;
-    expect(error.code).toBe("oracle_unavailable");
+    expect(error.code).toBe("blocked");
+  });
+
+  it("бросает blocked при тишине дольше таймаута", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        (_url: string, init?: RequestInit) =>
+          new Promise<Response>((_, reject) => {
+            init?.signal?.addEventListener("abort", () =>
+              reject(new DOMException("aborted", "AbortError")),
+            );
+          }),
+      ),
+    );
+
+    let thrown: unknown;
+    try {
+      await askOracle("Учить ли Rust?", API_URL, 30);
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect((thrown as OracleRequestError).code).toBe("blocked");
   });
 
   it("бросает oracle_unavailable при не-JSON ответе", async () => {

@@ -81,6 +81,8 @@ textarea:disabled { cursor: wait; opacity: .7; }
 .status-card strong { display: block; margin-bottom: 4px; color: #f1e8fc; font-size: 13px; }
 .status-card p { margin: 0; font-size: 13px; line-height: 1.45; }
 .retry-countdown { margin-top: 8px !important; color: #e3b8f5; font-variant-numeric: tabular-nums; }
+.status-card.blocked { border-color: rgba(255, 190, 120, .28); background: rgba(78, 48, 28, .45); }
+.status-card.blocked .status-symbol { background: #e8b26b; }
 .status-symbol { display: grid; flex: 0 0 24px; width: 24px; height: 24px; place-items: center; border-radius: 50%; color: #251434; background: #d09be9; font-weight: 600; }
 .panel-footer { margin-top: 30px; color: #6e6382; font-size: 11px; text-align: center; }
 
