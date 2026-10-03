@@ -110,6 +110,10 @@ src/index.ts               # composition root: Env → конфиги → про
 
 Нужные GitHub Secrets/Vars: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `GROQ_API_KEY`, `GROQ_MODEL`, `ORACLE_PROVIDER`, `ORACLE_FALLBACK_PROVIDER` (`groq` для связки openrouter → groq), `ORACLE_MAX_TOKENS`, `ORACLE_TEMPERATURE`, `ORACLE_TIMEOUT`, `CORS_ALLOWED_ORIGINS`, `CLOUDFLARE_WORKER_URL`.
 
+Безопасность CI — отдельно в `.github/workflows/security.yml`: gitleaks (секреты), CodeQL (SAST, JS/TS), аудит зависимостей (воркер — чистый `npm audit`, фронт — `audit-ci` с allowlist). Все `uses:` в workflows запинены на SHA (без Dependabot обновляются вручную). Заголовки фронта — `frontend/public/_headers`, копируется в корень сборки.
+
+Допустимые исключения аудита (`frontend/audit-ci.jsonc`, только без патчей upstream и с dev-only экспозицией): `GHSA-86w9-cpqp-85rv` (node-forge в dev-сервере Nuxt), `GHSA-vfj7-8cjw-p6xm` (braces в сборке). Пересматривать при появлении патчей; vitest держим на ^5 из-за `GHSA-82fw-gwwq-j7x9` в 3.x/4.x.
+
 ## Ошибки API
 
 ```text

@@ -1,0 +1,14 @@
+# Security headers для GitHub Pages (Nuxt копирует public/ в корень сборки).
+#
+# Нюансы:
+# - script-src/style-src содержат 'unsafe-inline': Nuxt встраивает в HTML
+#   конфиг window.__NUXT__ и критический CSS инлайном. Без этого гидратация
+#   ломается (проверено на текущей сборке: голые <script>/<style> в index.html).
+#   Внешние скрипты всё равно только свои.
+# - connect-src жёстко указывает воркер: при смене CLOUDFLARE_WORKER_URL
+#   обновить и здесь, иначе фронт перестанет достукиваться до API.
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://oracle-worker.elias-activity.workers.dev; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
