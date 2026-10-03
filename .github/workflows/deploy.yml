@@ -43,6 +43,14 @@ jobs:
         working-directory: worker
         run: npm run check
 
+      - name: Lint Worker
+        working-directory: worker
+        run: npm run lint
+
+      - name: Test Worker
+        working-directory: worker
+        run: npm run test
+
       - name: Deploy Worker
         if: github.event_name == 'push'
         working-directory: worker
@@ -83,6 +91,18 @@ jobs:
       - name: Install frontend dependencies
         working-directory: frontend
         run: npm ci
+
+      - name: Lint frontend
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Typecheck frontend
+        working-directory: frontend
+        run: npm run typecheck
+
+      - name: Test frontend
+        working-directory: frontend
+        run: npm run test
 
       - name: Generate static site
         working-directory: frontend

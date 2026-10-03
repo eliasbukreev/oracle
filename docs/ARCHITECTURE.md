@@ -68,8 +68,8 @@ docs/       # документация
 
 Три джобы, запускаются на `push` в `main` и на PR (пути `worker/**`, `frontend/**`):
 
-1. `worker-check`: `npm ci`, `npm run check` (tsc). Только на `push`: `wrangler secret put GOOGLE_AI_API_KEY` + `wrangler deploy --var ...`.
-2. `frontend`: `npm ci`, `nuxt generate` с `NUXT_APP_BASE_URL` и `NUXT_PUBLIC_ORACLE_API_URL` (из `vars.CLOUDFLARE_WORKER_URL`), загрузка артефакта Pages.
+1. `worker-check`: `npm ci`, `npm run check` (tsc), `npm run lint` (eslint), `npm run test` (vitest). Только на `push`: `wrangler secret put GOOGLE_AI_API_KEY` + `wrangler deploy --var ...`.
+2. `frontend`: `npm ci`, `npm run lint`, `npm run typecheck` (`nuxt prepare` + `vue-tsc`), `npm run test` (vitest), затем `nuxt generate` с `NUXT_APP_BASE_URL` и `NUXT_PUBLIC_ORACLE_API_URL` (из `vars.CLOUDFLARE_WORKER_URL`), загрузка артефакта Pages.
 3. `deploy-pages`: публикация на GitHub Pages. Только на `push`.
 
 Нужные GitHub Secrets/Vars: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `GOOGLE_AI_API_KEY`, `GOOGLE_AI_MODEL`, `GOOGLE_AI_MAX_TOKENS`, `GOOGLE_AI_TEMPERATURE`, `GOOGLE_AI_TIMEOUT`, `CORS_ALLOWED_ORIGINS`, `CLOUDFLARE_WORKER_URL`.
@@ -84,3 +84,23 @@ docs/       # документация
 ```
 
 Внутренние детали (статусы провайдера, тексты ошибок, стек-трейсы) наружу не отдаются, в логи пишутся краткие коды (`gemini_http_error`, `gemini_response_invalid` и т.п.).
+
+## Разработка
+
+Проверки запускаются отдельно в каждом пакете (`frontend/`, `worker/`).
+
+```text
+cd worker
+npm run check       # tsc --noEmit
+npm run lint        # eslint .
+npm run test        # vitest run
+npm run test:watch  # vitest (watch-режим)
+
+cd frontend
+npm run lint        # eslint . (модуль @nuxt/eslint)
+npm run typecheck   # nuxt prepare + vue-tsc --noEmit
+npm run test        # vitest run
+npm run test:watch  # vitest (watch-режим)
+```
+
+Тесты покрывают чистую логику без сети и браузера: в воркере — валидацию ответа модели, CORS, rate-limit и весь `fetch`-хендлер с моками (лимитеры и Gemini подменяются); во фронте — `services/oracleApi` (успех, коды ошибок, `retry_after` из тела и заголовка) и `services/oracleErrors` (склонения, `retry`-тексты). Те же команды гоняются в CI до деплоя.
