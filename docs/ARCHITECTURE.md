@@ -15,7 +15,7 @@ OpenRouter + Groq (OpenAI-совместимые chat/completions)
 ## Структура репозитория
 
 ```text
-frontend/   # Nuxt 3 + Vue, статический сайт для GitHub Pages
+frontend/   # Nuxt 4 + Vue, статический сайт для GitHub Pages
 worker/     # Cloudflare Worker (API), TypeScript
 docs/       # документация
 .github/workflows/deploy.yml  # CI/CD: worker + frontend + Pages
@@ -25,14 +25,39 @@ docs/       # документация
 
 ## Frontend `frontend/`
 
-- `app.vue` — каркас страницы
-- `components/OracleForm.vue` — ввод вопроса
-- `components/OracleResult.vue` — показ ответа
-- `components/OracleStatus.vue` — показ ошибки
-- `composables/useOracle.ts` — состояние `result / error / isLoading / isBlocked`
-- `services/oracleApi.ts` — `POST { question }` на URL воркера (таймаут 40с)
-- `types/oracle.ts` — типы ответа и ошибок
+Структура каталогов — как в Nuxt 4: `srcDir` равен `app/`, поэтому алиас `~`
+указывает на `app/`, а `nuxt.config.ts`, `public/` и `vitest.config.ts` живут
+в корне `frontend/`.
+
+- `app/app.vue` — каркас страницы
+- `app/components/OracleForm.vue` — ввод вопроса
+- `app/components/OracleResult.vue` — показ ответа
+- `app/components/OracleStatus.vue` — показ ошибки
+- `app/composables/useOracle.ts` — состояние `result / error / isLoading / isBlocked`
+- `app/services/oracleApi.ts` — `POST { question }` на URL воркера (таймаут 40с)
+- `app/types/oracle.ts` — типы ответа и ошибок
 - `nuxt.config.ts` — `oracleApiUrl` из `NUXT_PUBLIC_ORACLE_API_URL`, `baseURL` из `NUXT_APP_BASE_URL`
+- `app/app.config.ts` — режим иконок (`css` + слой `base`, иначе маски перебивают утилиты Tailwind)
+
+Стек фронта минимальный: Nuxt 4, Tailwind v4 (через `@tailwindcss/vite`),
+`@nuxt/icon` + локальная коллекция `lucide`, `@nuxt/fonts`, `@vueuse/nuxt`
+и `motion-v` подключены, но пока не используются — взяты как основа для
+следующих фич. Пинга нет, состояние живёт в одном composable.
+
+Три неочевидных места, из-за которых всё ломается тихо:
+
+- Токены в `app/assets/css/main.css` лежат в `@theme`. Namespace `text-*`
+  обслуживает и размер, и цвет, поэтому размеры названы `text-caption`,
+  `text-note`, `text-body`, ` text-lead`, `text-display` — иначе `text-overline`
+  или `text-label` затёрли бы сами себя и текст получился бы кеглем 16px.
+- Значение тени в `@theme` не должно ссылаться на другой токен
+  (`var(--color-...)`): Tailwind публикует в `:root` только используемые
+  переменные, и несуществующая превращает `box-shadow` в invalid → `none`.
+- `@nuxt/icon` кладёт CSS коллекции в `<style>` инлайном, поэтому
+  `style-src 'unsafe-inline'` в CSP нужен. Клиентский бандл иконок
+  (`clientBundle.scan`) обязателен: иконки, рендерящиеся только на клиенте
+  (спиннер, иконки в карточке ошибки), не попадают в пререндер и без
+  `scan` модуль пошёл бы за ними на `api.iconify.design`, который режет CSP.
 
 Секретов во фронтенде нет. Пример: `frontend/.env.example`.
 
@@ -101,7 +126,9 @@ src/index.ts               # composition root: Env → конфиги → про
 
 ## Деплой `.github/workflows/deploy.yml`
 
-Три джобы, запускаются на `push` в `main` и на PR (пути `worker/**`, `frontend/**`):
+Три джобы, запускаются на `push` в `main` и на PR (пути `worker/**`, `frontend/**`).
+Node везде 24: Nuxt 4 требует `^22.19.0 || ^24.11.0 || >=26`, а брать нижнюю
+границу 22 в плавающем теге рискованно.
 
 1. `worker-check`: `npm ci`, `npm run check` (tsc), `npm run lint` (eslint), `npm run test` (vitest). Только на `push`: `wrangler secret put OPENROUTER_API_KEY` + `wrangler secret put GROQ_API_KEY` + `wrangler deploy --var ...`.
 2. `frontend`: `npm ci`, `npm run lint`, `npm run typecheck` (`nuxt prepare` + `vue-tsc`), `npm run test` (vitest), затем `nuxt generate` с `NUXT_APP_BASE_URL` и `NUXT_PUBLIC_ORACLE_API_URL` (из `vars.CLOUDFLARE_WORKER_URL`), загрузка артефакта Pages.
@@ -109,7 +136,7 @@ src/index.ts               # composition root: Env → конфиги → про
 
 Нужные GitHub Secrets/Vars: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `GROQ_API_KEY`, `GROQ_MODEL`, `ORACLE_PROVIDER`, `ORACLE_FALLBACK_PROVIDER` (`groq` для связки openrouter → groq), `ORACLE_MAX_TOKENS`, `ORACLE_TEMPERATURE`, `ORACLE_TIMEOUT`, `CORS_ALLOWED_ORIGINS`, `CLOUDFLARE_WORKER_URL`.
 
-Безопасность CI — отдельно в `.github/workflows/security.yml`: gitleaks (секреты), CodeQL (SAST, JS/TS), аудит зависимостей (воркер — чистый `npm audit`, фронт — `audit-ci` с allowlist). Все `uses:` в workflows запинены на SHA (без Dependabot обновляются вручную). Заголовки фронта — `frontend/public/_headers`, копируется в корень сборки.
+Безопасность CI — отдельно в `.github/workflows/security.yml`: gitleaks (секреты), CodeQL (SAST, JS/TS), аудит зависимостей (воркер — чистый `npm audit`, фронт — `audit-ci` с allowlist). Все `uses:` в workflows запинены на SHA (без Dependabot обновляются вручную). Заголовки фронта — `frontend/public/_headers`, копируется в корень сборки. CSP жёсткий и руками поддерживается: единственные внешние источники — сам воркер в `connect-src` (дублируется из `CLOUDFLARE_WORKER_URL`, менять оба места) и `'unsafe-inline'` в `script-src`/`style-src` под инлайновый конфиг Nuxt и CSS иконок. Шрифты self-hosted, Google Fonts из источников убран.
 
 Допустимые исключения аудита (`frontend/audit-ci.jsonc`, только без патчей upstream и с dev-only экспозицией): `GHSA-86w9-cpqp-85rv` (node-forge в dev-сервере Nuxt), `GHSA-vfj7-8cjw-p6xm` (braces в сборке). Пересматривать при появлении патчей; vitest держим на ^5 из-за `GHSA-82fw-gwwq-j7x9` в 3.x/4.x.
 
@@ -154,7 +181,7 @@ npm run test:watch  # vitest (watch-режим)
 Тесты покрывают чистую логику без сети и браузера: в воркере по модулям —
 `oracle` (валидация, промпт), `providers` (фабрика, конфиг, каждый
 провайдер с подменённым fetch), `http` (CORS, IP, лимитеры) и `handler` (весь флоу
-со стабом провайдера через DI); во фронте — `services/oracleApi` (успех, коды ошибок, `retry_after` из тела и заголовка) и `services/oracleErrors` (склонения, `retry`-тексты). Те же команды гоняются в CI до деплоя.
+со стабом провайдера через DI); во фронте — `app/services/oracleApi` (успех, коды ошибок, `retry_after` из тела и заголовка) и `app/services/oracleErrors` (склонения, `retry`-тексты). Те же команды гоняются в CI до деплоя.
 
 ## Когда включать Turnstile
 

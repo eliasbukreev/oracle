@@ -59,7 +59,7 @@ describe("askOracle", () => {
 
     expect(result).toEqual(VALID_PAYLOAD);
     expect(fetchMock).toHaveBeenCalledOnce();
-    const [url, init] = fetchMock.mock.calls[0];
+    const [url, init] = fetchMock.mock.calls[0] ?? [];
     expect(url).toBe(API_URL);
     expect(init?.method).toBe("POST");
     expect(init?.body).toBe(JSON.stringify({ question: "Учить ли Rust?" }));
