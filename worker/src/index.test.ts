@@ -2,6 +2,7 @@
 // Цепочка по умолчанию: OpenRouter primary + Groq fallback.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import worker, { type Env } from "./index";
+import { PREFLIGHT_MAX_AGE_SECONDS } from "./http";
 
 const VALID_ORACLE_JSON = JSON.stringify({
   verdict: "ДА",
@@ -57,6 +58,9 @@ describe("worker fetch", () => {
       makeEnv({ OPENROUTER_API_KEY: "   ", OPENROUTER_MODEL: "" }),
     );
     expect(res.status).toBe(204);
+    expect(res.headers.get("Access-Control-Max-Age")).toBe(
+      String(PREFLIGHT_MAX_AGE_SECONDS),
+    );
   });
 
   it("не-POST отвечает 405 даже с битым конфигом", async () => {

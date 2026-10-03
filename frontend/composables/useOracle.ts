@@ -1,6 +1,5 @@
 import type { OracleError, OracleResponse } from "~/types/oracle";
 import { OracleRequestError, askOracle } from "~/services/oracleApi";
-import { RECHECK_INTERVAL_MS, checkConnection } from "~/services/connectivity";
 import {
   errorMessages,
   restingMessage,
@@ -55,41 +54,7 @@ export function useOracle() {
 
   onUnmounted(() => {
     stopRetryCountdown();
-    stopRecheck();
   });
-
-  let recheckTimer: ReturnType<typeof setInterval> | null = null;
-
-  function stopRecheck() {
-    if (recheckTimer !== null) {
-      clearInterval(recheckTimer);
-      recheckTimer = null;
-    }
-  }
-
-  // Тихая проба связи: воркер отвечает 204 до rate-limit и LLM,
-  async function probe() {
-    const apiUrl = config.public.oracleApiUrl;
-
-    if (!apiUrl) {
-      return;
-    }
-
-    const reachable = await checkConnection(apiUrl);
-    isBlocked.value = !reachable;
-
-    if (!reachable && recheckTimer === null) {
-      recheckTimer = setInterval(async () => {
-        if (await checkConnection(apiUrl)) {
-          isBlocked.value = false;
-          stopRecheck();
-        }
-      }, RECHECK_INTERVAL_MS);
-    }
-  }
-
-  // onMounted выполняется только на клиенте — SSR пробу не шлёт.
-  onMounted(probe);
 
   async function ask(question: string) {
     const trimmedQuestion = question.trim();
@@ -111,7 +76,6 @@ export function useOracle() {
 
       // Раз ответ пришёл — сигнал проходит, баннер гасим.
       isBlocked.value = false;
-      stopRecheck();
     } catch (caughtError) {
       const requestError =
         caughtError instanceof OracleRequestError ? caughtError : null;

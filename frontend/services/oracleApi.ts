@@ -1,5 +1,6 @@
 import type { OracleErrorCode, OracleResponse } from "~/types/oracle";
-import { ASK_TIMEOUT_MS } from "~/services/connectivity";
+
+const ASK_TIMEOUT_MS = 40000;
 
 type ApiErrorResponse = {
   error?: unknown;

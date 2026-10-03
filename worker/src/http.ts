@@ -4,6 +4,10 @@ const JSON_HEADERS = {
   "Content-Type": "application/json; charset=utf-8",
 };
 
+// Кэш префлайта в браузере: без него Chrome шлёт OPTIONS перед каждым
+// POST (дефолт ~5с), хотя ask-запросов на странице может быть много.
+export const PREFLIGHT_MAX_AGE_SECONDS = 600;
+
 export function parseAllowedOrigins(raw: string): Set<string> {
   return new Set(
     raw
@@ -23,6 +27,7 @@ export function corsHeaders(request: Request, allowed: Set<string>): Headers {
 
   headers.set("Access-Control-Allow-Methods", "POST, OPTIONS");
   headers.set("Access-Control-Allow-Headers", "Content-Type");
+  headers.set("Access-Control-Max-Age", String(PREFLIGHT_MAX_AGE_SECONDS));
   headers.set("Vary", "Origin");
   return headers;
 }

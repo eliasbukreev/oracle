@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  PREFLIGHT_MAX_AGE_SECONDS,
   clientIp,
   corsHeaders,
   isRateLimited,
@@ -44,6 +45,16 @@ describe("corsHeaders", () => {
     );
     expect(headers.get("Vary")).toBe("Origin");
     expect(headers.get("Access-Control-Allow-Methods")).toBe("POST, OPTIONS");
+    expect(headers.get("Access-Control-Max-Age")).toBe(
+      String(PREFLIGHT_MAX_AGE_SECONDS),
+    );
+  });
+
+  it("кэширует префлайт независимо от origin", () => {
+    const headers = corsHeaders(requestWithOrigin("https://evil.example"), allowed);
+    expect(headers.get("Access-Control-Max-Age")).toBe(
+      String(PREFLIGHT_MAX_AGE_SECONDS),
+    );
   });
 
   it("не ставит Allow-Origin для чужого origin", () => {
