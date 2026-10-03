@@ -80,6 +80,7 @@ textarea:disabled { cursor: wait; opacity: .7; }
 .status-card { display: flex; gap: 12px; padding: 16px; border: 1px solid rgba(233, 174, 255, .2); color: #d8cde9; background: rgba(68, 35, 91, .45); }
 .status-card strong { display: block; margin-bottom: 4px; color: #f1e8fc; font-size: 13px; }
 .status-card p { margin: 0; font-size: 13px; line-height: 1.45; }
+.retry-countdown { margin-top: 8px !important; color: #e3b8f5; font-variant-numeric: tabular-nums; }
 .status-symbol { display: grid; flex: 0 0 24px; width: 24px; height: 24px; place-items: center; border-radius: 50%; color: #251434; background: #d09be9; font-weight: 600; }
 .panel-footer { margin-top: 30px; color: #6e6382; font-size: 11px; text-align: center; }
 

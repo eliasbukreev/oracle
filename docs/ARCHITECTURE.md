@@ -46,7 +46,8 @@ docs/       # документация
 
 1. `OPTIONS` → `204` (CORS preflight).
 2. Не-`POST` → `405 { error: "invalid_request" }`.
-3. Парсинг JSON. `question` обязан быть строкой `1..500` символов после `trim()`, иначе `400 { error: "invalid_request" }`.
+3. Штатный Workers Rate Limiting **до** парсинга тела (префлайты не лимитируются): сначала бакет per-IP (`CF-Connecting-IP`, `10` запросов / `60` сек), затем глобальный бакет (`100` запросов / `60` сек, защита квоты Gemini). При превышении → `429 { error: "oracle_resting", retry_after: 60 }` + заголовок `Retry-After: 60`. Лимиты задаются в `worker/wrangler.toml` (`[[ratelimits]]`), `period` бывает только `10` или `60`. Лимиты локальны на колокейшн и разрешительные — это защита от bursts, не точный учёт. Без биндингов (локальный `dev`) проверка пропускается.
+4. Парсинг JSON. `question` обязан быть строкой `1..500` символов после `trim()`, иначе `400 { error: "invalid_request" }`.
 4. Промпт собирается только на бэкенде (русский, мистический стиль, требование вернуть только JSON).
 5. Запрос в Gemini: `POST /v1beta/models/{model}:generateContent`, `responseMimeType: application/json`, таймаут через `AbortController` (по умолчанию 20с).
 6. Ответ модели чистится от ```-обёртки, парсится и валидируется: `verdict` (непустая строка), `confidence` (число `0..100`), `prophecy` и `reason` (непустые строки, каждое поле до 4000 символов). Иначе `502 { error: "oracle_unavailable" }`.
@@ -78,7 +79,8 @@ docs/       # документация
 ```text
 400 invalid_request     # плохой JSON или вопрос вне 1..500 символов
 405 invalid_request     # не-POST метод
-502 oracle_unavailable  # Gemini недоступен, неверный конфиг или ответ модели не прошёл валидацию
+429 oracle_resting      # превышен rate limit, повтор через retry_after секунд
+502 oracle_unavailable  # Gemini недоступен, неверный конфиг, ошибка rate-limit биндинга или ответ модели не прошёл валидацию
 ```
 
 Внутренние детали (статусы провайдера, тексты ошибок, стек-трейсы) наружу не отдаются, в логи пишутся краткие коды (`gemini_http_error`, `gemini_response_invalid` и т.п.).

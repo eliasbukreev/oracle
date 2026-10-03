@@ -15,4 +15,5 @@ export type OracleErrorCode =
 export type OracleError = {
   code: OracleErrorCode
   message: string
+  retryAfter?: number
 }

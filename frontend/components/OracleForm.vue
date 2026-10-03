@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const props = defineProps<{
   isLoading: boolean
+  isResting?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -9,9 +10,10 @@ const emit = defineEmits<{
 
 const question = ref('')
 const maxLength = 500
+const isDisabled = computed(() => props.isLoading || props.isResting)
 
 function submit() {
-  if (!question.value.trim() || props.isLoading) {
+  if (!question.value.trim() || isDisabled.value) {
     return
   }
 
@@ -30,14 +32,14 @@ function submit() {
         maxlength="500"
         placeholder="Спроси о том, что не дает тебе покоя..."
         rows="4"
-        :disabled="isLoading"
+        :disabled="isDisabled"
       />
       <span class="character-count">{{ question.length }} / {{ maxLength }}</span>
     </div>
-    <button class="ask-button" type="submit" :disabled="!question.trim() || isLoading">
+    <button class="ask-button" type="submit" :disabled="!question.trim() || isDisabled">
       <span v-if="isLoading" class="button-loader" aria-hidden="true" />
-      <span>{{ isLoading ? 'Оракул думает...' : 'Спросить оракула' }}</span>
-      <span v-if="!isLoading" class="button-arrow" aria-hidden="true">↗</span>
+      <span>{{ isLoading ? 'Оракул думает...' : isResting ? 'Оракул отдыхает...' : 'Спросить оракула' }}</span>
+      <span v-if="!isLoading && !isResting" class="button-arrow" aria-hidden="true">↗</span>
     </button>
   </form>
 </template>

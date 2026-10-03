@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { result, error, isLoading, ask } = useOracle()
+const { result, error, isLoading, isResting, retryIn, ask } = useOracle()
 </script>
 
 <template>
@@ -15,9 +15,9 @@ const { result, error, isLoading, ask } = useOracle()
         <p class="intro">Задай вопрос. Иногда ответ уже ждет,<br class="desktop-break"> когда ты его услышишь.</p>
       </header>
 
-      <OracleForm :is-loading="isLoading" @ask="ask" />
+      <OracleForm :is-loading="isLoading" :is-resting="isResting" @ask="ask" />
       <OracleResult v-if="result" :result="result" />
-      <OracleStatus v-if="error" :error="error" />
+      <OracleStatus v-if="error" :error="error" :retry-in="retryIn" />
 
       <footer class="panel-footer">Ответы приходят тем, кто готов их принять</footer>
     </section>
