@@ -32,7 +32,8 @@ docs/       # документация
 - `app/app.vue` — каркас: панель + `AnimatePresence` с экранами
 - `app/components/OracleForm.vue` — ввод вопроса
 - `app/components/TarotScreenHome.vue` — экран вопроса (шапка + форма + статус)
-- `app/components/TarotScreenLoading.vue` — экран загрузки
+- `app/components/TarotScreenLoading.vue` — экран загрузки: тасующиеся CSS-рубашки, фазовый статус по elapsed, шёпоты по периферии
+- `app/services/loadingWhispers.ts` — фразы-шёпоты, фазовые статусы, споты (чистый модуль с тестами)
 - `app/components/TarotCardScreen.vue` — экран карты (слева карта, справа текст, кнопка под текстом)
 - `app/components/TarotScreenFinale.vue` — итог + миниатюры + «Новый вопрос»
 - `app/components/TarotCardImage.vue` — картинка карты (рубашка до загрузки, поворот перевёрнутой)
