@@ -40,6 +40,33 @@ export function useTarotFlow() {
     send({ type: "reset" });
   }
 
+  /** Дев-превью экранов без бэкенда. В проде — no-op.
+   *  Фикстура грузится динамически, чтобы не попадать в прод-бандл. */
+  async function preview(kind: import("~/services/tarotPreview").PreviewKind) {
+    if (!import.meta.dev) {
+      console.warn("preview доступен только в dev-режиме");
+      return;
+    }
+
+    if (kind === "loading") {
+      screen.value = "loading";
+      cardIndex.value = 0;
+      return;
+    }
+
+    const { PREVIEW_SPREAD } = await import("~/services/tarotPreview");
+    oracle.result.value = PREVIEW_SPREAD;
+    oracle.error.value = null;
+
+    if (kind === "finale") {
+      screen.value = "finale";
+      cardIndex.value = 2;
+    } else {
+      screen.value = "card";
+      cardIndex.value = Number(kind.slice(-1));
+    }
+  }
+
   const screenKey = computed(() => `${screen.value}-${cardIndex.value}`);
 
   return {
@@ -50,5 +77,6 @@ export function useTarotFlow() {
     ask,
     nextCard,
     reset,
+    preview,
   };
 }

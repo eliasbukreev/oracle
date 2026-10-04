@@ -38,8 +38,10 @@ docs/       # документация
 - `app/components/TarotCardImage.vue` — картинка карты (рубашка до загрузки, поворот перевёрнутой)
 - `app/components/OracleStatus.vue` — показ ошибки
 - `app/composables/useOracle.ts` — запрос к API: `result / error / isLoading / isBlocked`
-- `app/composables/useTarotFlow.ts` — тонкая Vue-обёртка над машиной экранов
+- `app/composables/useTarotFlow.ts` — тонкая Vue-обёртка над машиной экранов (+ `preview()` только для dev)
+- `app/components/DevPreviewBar.vue` — плавающая dev-панель превью экранов (в прод не попадает)
 - `app/services/tarotFlow.ts` — чистая машина `home → loading → card-0 → card-1 → card-2 → finale` (редьюсер, только вперёд)
+- `app/services/tarotPreview.ts` — дев-фикстура расклада с реальными картинками (только dev)
 - `app/services/screenMotion.ts` — параметры перехода экранов (fade+slide 0.25с)
 - `app/services/oracleApi.ts` — `POST { question }` на URL воркера (таймаут 40с)
 - `app/types/oracle.ts` — типы ответа и ошибок
@@ -52,6 +54,12 @@ docs/       # документация
 импортируется вручную — автоимпорт его не подхватывает; `MotionConfig
 reduced-motion="user"` гасит анимации по системной настройке). Пинга нет,
 состояние живёт в composables.
+
+Превью экранов в dev: `nuxt dev` показывает внизу панель `dev` с кнопками
+«Загрузка», «Карта 1/2/3», «Финал», «Сброс» — экраны открываются на мок-раскладе
+(`tarotPreview.ts`) без бэкенда. Панель и фикстура грузятся только в dev
+(асинхронные чанки за `import.meta.dev`), в прод-бандле их нет — проверяется
+поиском `Дев-панель`/`PREVIEW_SPREAD` в `.output/public/_nuxt/`.
 
 Три неочевидных места, из-за которых всё ломается тихо:
 

@@ -16,8 +16,14 @@ const {
   ask,
   nextCard,
   reset,
+  preview,
 } = useTarotFlow()
 
+const isDev = import.meta.dev
+// Асинхронно и только в dev: в прод-бандл панель не попадает вообще.
+const DevPreviewBar = isDev
+  ? defineAsyncComponent(() => import("~/components/DevPreviewBar.vue"))
+  : null
 const isWideScreen = computed(() => screen.value === 'card' || screen.value === 'finale')
 const currentCard = computed(() => result.value?.cards[cardIndex.value])
 </script>
@@ -67,6 +73,13 @@ const currentCard = computed(() => result.value?.cards[cardIndex.value])
 
         <footer class="mt-7.5 text-center text-caption text-faint">Ответы приходят тем, кто готов их принять</footer>
       </section>
+
+      <component
+        :is="DevPreviewBar"
+        v-if="isDev && DevPreviewBar"
+        @preview="preview"
+        @reset="reset"
+      />
     </main>
   </MotionConfig>
 </template>
