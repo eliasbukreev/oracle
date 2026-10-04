@@ -19,7 +19,7 @@ const emit = defineEmits<{
   <div>
     <header class="text-center">
       <div class="mx-auto mb-4.5 grid size-12 place-items-center rounded-full border border-brass-line bg-edge-faint text-xl text-brass shadow-orb">
-        <Icon name="i-lucide-sparkles" />
+        <Icon name="i-game-icons-triquetra" />
       </div>
       <p class="m-0 text-caption font-semibold tracking-overline text-brass uppercase">Твое тайное предсказание</p>
       <h1 class="font-display my-2.5 text-[clamp(42px,8vw,58px)] leading-none font-medium tracking-display text-paper">Оракул</h1>

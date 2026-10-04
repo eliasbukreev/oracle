@@ -49,7 +49,8 @@ docs/       # документация
 - `app/app.config.ts` — режим иконок (`css` + слой `base`, иначе маски перебивают утилиты Tailwind)
 
 Стек фронта минимальный: Nuxt 4, Tailwind v4 (через `@tailwindcss/vite`),
-`@nuxt/icon` + локальная коллекция `lucide`, `@nuxt/fonts`, `@vueuse/nuxt`,
+`@nuxt/icon` + локальные коллекции `lucide` и `game-icons` (трикветра и прочая
+мистика — из `game-icons`, интерфейс — из `lucide`), `@nuxt/fonts`, `@vueuse/nuxt`,
 `motion-v` (переходы экранов через `AnimatePresence mode="wait"`, `<motion.div>`
 импортируется вручную — автоимпорт его не подхватывает; `MotionConfig
 reduced-motion="user"` гасит анимации по системной настройке). Пинга нет,

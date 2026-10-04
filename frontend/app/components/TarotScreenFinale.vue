@@ -28,7 +28,7 @@ const emit = defineEmits<{
     </ol>
 
     <div class="flex gap-2.5 border border-edge bg-black/20 p-4 text-note leading-[1.55] text-soft">
-      <Icon name="i-lucide-sparkles" class="shrink-0 text-brass" aria-hidden="true" />
+      <Icon name="i-game-icons-triquetra" class="shrink-0 text-brass" aria-hidden="true" />
       <p class="font-display m-0 text-lead leading-[1.5]">{{ result.summary }}</p>
     </div>
 
@@ -38,7 +38,7 @@ const emit = defineEmits<{
       @click="emit('reset')"
     >
       <span>Новый вопрос</span>
-      <Icon name="i-lucide-rotate-ccw" class="text-[18px] leading-none" aria-hidden="true" />
+      <Icon name="i-game-icons-infinity" class="text-[18px] leading-none" aria-hidden="true" />
     </button>
   </div>
 </template>

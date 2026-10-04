@@ -58,7 +58,7 @@ const isLast = computed(() => props.index >= 2)
           @click="emit('next')"
         >
           <span>{{ isLast ? 'Смотреть итог' : 'Следующая карта' }}</span>
-          <Icon :name="isLast ? 'i-lucide-sparkles' : 'i-lucide-arrow-right'" class="text-[18px] leading-none" aria-hidden="true" />
+          <Icon :name="isLast ? 'i-game-icons-triquetra' : 'i-lucide-arrow-right'" class="text-[18px] leading-none" aria-hidden="true" />
         </button>
       </div>
     </div>
