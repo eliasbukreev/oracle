@@ -54,6 +54,7 @@ export const VALID_RAW = {
   maxOutputTokens: "800",
   temperature: "0.8",
   timeoutSeconds: "20",
+  imageBaseUrl: "https://assets.test/",
 };
 
 export function validConfig(): OracleProviderConfig {

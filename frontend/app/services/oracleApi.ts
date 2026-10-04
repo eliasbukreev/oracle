@@ -72,7 +72,9 @@ function isTarotCard(value: unknown): value is TarotCard {
     isTarotPosition(card.position) &&
     isTarotOrientation(card.orientation) &&
     typeof card.meaning === "string" &&
-    card.meaning.length > 0
+    card.meaning.length > 0 &&
+    // Пустая строка допустима: R2 может быть не настроен, тогда только текст.
+    typeof card.imageUrl === "string"
   );
 }
 
@@ -88,7 +90,8 @@ function isTarotResponse(value: unknown): value is TarotResponse {
     response.cards.length === 3 &&
     response.cards.every(isTarotCard) &&
     typeof response.summary === "string" &&
-    response.summary.length > 0
+    response.summary.length > 0 &&
+    typeof response.backImageUrl === "string"
   );
 }
 

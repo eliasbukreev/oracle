@@ -156,6 +156,7 @@ describe("parseSpreadResponse", () => {
           position: "past",
           orientation: "upright",
           meaning: "Начало позади.",
+          imageUrl: "",
         },
         {
           id: "the-magician",
@@ -163,6 +164,7 @@ describe("parseSpreadResponse", () => {
           position: "present",
           orientation: "reversed",
           meaning: "Сила в руках, но не твоих.",
+          imageUrl: "",
         },
         {
           id: "the-high-priestess",
@@ -170,10 +172,28 @@ describe("parseSpreadResponse", () => {
           position: "future",
           orientation: "upright",
           meaning: "Тайна рядом.",
+          imageUrl: "",
         },
       ],
       summary: "Итог расклада.",
+      backImageUrl: "",
     });
+  });
+
+  it("подставляет URL картинок из R2 когда задан base", () => {
+    const result = parseSpreadResponse(
+      llmJson(),
+      DRAWN,
+      "https://assets.test/",
+    );
+    expect(result?.cards.map((c) => c.imageUrl)).toEqual([
+      "https://assets.test/tarot/00-TheFool.webp",
+      "https://assets.test/tarot/01-TheMagician.webp",
+      "https://assets.test/tarot/02-TheHighPriestess.webp",
+    ]);
+    expect(result?.backImageUrl).toBe(
+      "https://assets.test/tarot/CardBacks.webp",
+    );
   });
 
   it("снимает markdown-обёртку", () => {
@@ -277,6 +297,7 @@ describe("isTarotResponse", () => {
             position: "past",
             orientation: "upright",
             meaning: "x",
+            imageUrl: "https://img.test/a.webp",
           },
           {
             id: "b",
@@ -284,6 +305,7 @@ describe("isTarotResponse", () => {
             position: "present",
             orientation: "reversed",
             meaning: "y",
+            imageUrl: "",
           },
           {
             id: "c",
@@ -291,9 +313,11 @@ describe("isTarotResponse", () => {
             position: "future",
             orientation: "upright",
             meaning: "z",
+            imageUrl: "",
           },
         ],
         summary: "s",
+        backImageUrl: "",
       }),
     ).toBe(true);
   });
@@ -311,6 +335,24 @@ describe("isTarotResponse", () => {
         summary: "s",
       }),
     ).toBe(false);
+  });
+});
+
+describe("images", () => {
+  it("маппит PNG-набор в WebP-ключи R2", async () => {
+    const { toImageKey, tarotImageUrl, tarotBackImageUrl } = await import(
+      "./images"
+    );
+    expect(toImageKey("00-TheFool.png")).toBe("00-TheFool.webp");
+    expect(toImageKey("Wands01.png")).toBe("Wands01.webp");
+    expect(tarotImageUrl("https://assets.test/", "00-TheFool.png")).toBe(
+      "https://assets.test/tarot/00-TheFool.webp",
+    );
+    expect(tarotImageUrl("", "00-TheFool.png")).toBe("");
+    expect(tarotBackImageUrl("https://assets.test")).toBe(
+      "https://assets.test/tarot/CardBacks.webp",
+    );
+    expect(tarotBackImageUrl("")).toBe("");
   });
 });
 
@@ -348,7 +390,7 @@ describe("runTarotWorkflow", () => {
         seen = input;
         return {
           ok: true as const,
-          response: { cards: [], summary: "ok" },
+          response: { cards: [], summary: "ok", backImageUrl: "" },
         };
       },
     };

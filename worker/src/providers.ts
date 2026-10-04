@@ -35,6 +35,8 @@ export interface RawProviderConfig {
   temperature: string;
   /** Таймаут в секундах строкой, как в env. */
   timeoutSeconds: string;
+  /** Base URL картинок (R2). Опционален: пусто = ответы без imageUrl. */
+  imageBaseUrl: string;
 }
 
 export function createProviderConfig(
@@ -45,6 +47,7 @@ export function createProviderConfig(
   const maxOutputTokens = Number.parseInt(raw.maxOutputTokens, 10);
   const temperature = Number.parseFloat(raw.temperature);
   const timeoutSeconds = Number.parseInt(raw.timeoutSeconds, 10);
+  const imageBaseUrl = raw.imageBaseUrl.trim().replace(/\/+$/, "");
 
   // Логируем только имена битых полей, не значения: среди них секреты.
   const invalidFields: string[] = [];
@@ -66,5 +69,6 @@ export function createProviderConfig(
     timeoutMs: Number.isFinite(timeoutSeconds)
       ? timeoutSeconds * 1000
       : DEFAULT_TIMEOUT_MS,
+    imageBaseUrl,
   };
 }

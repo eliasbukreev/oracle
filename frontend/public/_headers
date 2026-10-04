@@ -1,6 +1,0 @@
-# Security headers для GitHub Pages (Nuxt копирует public/ в корень сборки).
-/*
-  X-Content-Type-Options: nosniff
-  X-Frame-Options: DENY
-  Referrer-Policy: strict-origin-when-cross-origin
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://oracle-worker.elias-activity.workers.dev; frame-ancestors 'none'; base-uri 'self'; form-action 'self'

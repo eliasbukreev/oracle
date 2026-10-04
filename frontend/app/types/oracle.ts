@@ -8,11 +8,15 @@ export type TarotCard = {
   position: TarotPosition
   orientation: TarotOrientation
   meaning: string
+  /** Абсолютный URL картинки в R2. Пусто = хранилище не настроено. */
+  imageUrl: string
 }
 
 export type TarotResponse = {
   cards: TarotCard[]
   summary: string
+  /** URL рубашки колоды. Пусто = хранилище не настроено. */
+  backImageUrl: string
 }
 
 /** Исторический алиас: раньше ответом было одиночное пророчество. */

@@ -1,17 +1,3 @@
-// Composition root воркера: тонкая склейка Cloudflare Env
-// с платформенно-независимым хендлером.
-//
-// Схема переменных:
-//   общие параметры генерации — ORACLE_TEMPERATURE, ORACLE_MAX_TOKENS,
-//   ORACLE_TIMEOUT (одинаковы для всех провайдеров);
-//   своё у каждого провайдера — только ключ и модель:
-//   OPENROUTER_API_KEY (secret) + OPENROUTER_MODEL,
-//   GROQ_API_KEY (secret) + GROQ_MODEL.
-// Выбор: ORACLE_PROVIDER — primary (дефолт "openrouter"),
-// ORACLE_FALLBACK_PROVIDER — secondary (пусто = без fallback).
-//
-// Бизнес-логика:   oracle.ts (домен), providers/* (LLM), handler.ts (оркестрация)
-// Платформа:       http.ts (CORS/ответы/лимиты), этот файл (Env → deps)
 import { handleAsk } from "./handler";
 import { jsonResponse } from "./http";
 import {
@@ -33,6 +19,8 @@ export interface Env {
   ORACLE_TEMPERATURE: string;
   ORACLE_TIMEOUT: string;
   CORS_ALLOWED_ORIGINS: string;
+  /** Base URL картинок таро (R2 за кастомным доменом). Пусто = ответы без картинок. */
+  TAROT_IMAGE_BASE_URL?: string;
   /** Имя primary LLM-провайдера. Не задано — используется дефолт. */
   ORACLE_PROVIDER?: string;
   /** Имя fallback-провайдера. Не задано — fallback отключён. */
@@ -82,6 +70,7 @@ function buildProvider(kind: string, env: Env): OracleProvider | null {
     maxOutputTokens: env.ORACLE_MAX_TOKENS ?? "",
     temperature: env.ORACLE_TEMPERATURE ?? "",
     timeoutSeconds: env.ORACLE_TIMEOUT ?? "",
+    imageBaseUrl: env.TAROT_IMAGE_BASE_URL ?? "",
   });
 
   if (!config) {

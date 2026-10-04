@@ -53,11 +53,11 @@ docs/       # документация
 - Значение тени в `@theme` не должно ссылаться на другой токен
   (`var(--color-...)`): Tailwind публикует в `:root` только используемые
   переменные, и несуществующая превращает `box-shadow` в invalid → `none`.
-- `@nuxt/icon` кладёт CSS коллекции в `<style>` инлайном, поэтому
-  `style-src 'unsafe-inline'` в CSP нужен. Клиентский бандл иконок
+- `@nuxt/icon` кладёт CSS коллекции в `<style>` инлайном (CSP у нас нет,
+  см. раздел про деплой, так что это просто факт). Клиентский бандл иконок
   (`clientBundle.scan`) обязателен: иконки, рендерящиеся только на клиенте
   (спиннер, иконки в карточке ошибки), не попадают в пререндер и без
-  `scan` модуль пошёл бы за ними на `api.iconify.design`, который режет CSP.
+  `scan` модуль пошёл бы за ними на `api.iconify.design` в рантайме.
 
 Секретов во фронтенде нет. Пример: `frontend/.env.example`.
 
@@ -129,6 +129,7 @@ src/index.ts               # composition root: Env → конфиги → про
 | `ORACLE_TEMPERATURE` | var | температура |
 | `ORACLE_TIMEOUT` | var | таймаут запроса, сек |
 | `CORS_ALLOWED_ORIGINS` | var | список разрешённых origin через запятую |
+| `TAROT_IMAGE_BASE_URL` | var (опц.) | base URL картинок таро в R2, напр. `https://assets.example.com`; пусто = ответы без `imageUrl` |
 
 ## Деплой `.github/workflows/deploy.yml`
 
@@ -140,9 +141,21 @@ Node везде 24: Nuxt 4 требует `^22.19.0 || ^24.11.0 || >=26`, а б�
 2. `frontend`: `npm ci`, `npm run lint`, `npm run typecheck` (`nuxt prepare` + `vue-tsc`), `npm run test` (vitest), затем `nuxt generate` с `NUXT_APP_BASE_URL` и `NUXT_PUBLIC_ORACLE_API_URL` (из `vars.CLOUDFLARE_WORKER_URL`), загрузка артефакта Pages.
 3. `deploy-pages`: публикация на GitHub Pages. Только на `push`.
 
-Нужные GitHub Secrets/Vars: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `GROQ_API_KEY`, `GROQ_MODEL`, `ORACLE_PROVIDER`, `ORACLE_FALLBACK_PROVIDER` (`groq` для связки openrouter → groq), `ORACLE_MAX_TOKENS`, `ORACLE_TEMPERATURE`, `ORACLE_TIMEOUT`, `CORS_ALLOWED_ORIGINS`, `CLOUDFLARE_WORKER_URL`.
+Нужные GitHub Secrets/Vars: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `GROQ_API_KEY`, `GROQ_MODEL`, `ORACLE_PROVIDER`, `ORACLE_FALLBACK_PROVIDER` (`groq` для связки openrouter → groq), `ORACLE_MAX_TOKENS`, `ORACLE_TEMPERATURE`, `ORACLE_TIMEOUT`, `CORS_ALLOWED_ORIGINS`, `CLOUDFLARE_WORKER_URL`, `TAROT_IMAGE_BASE_URL` (опц., см. «Изображения карт»).
 
-Безопасность CI — отдельно в `.github/workflows/security.yml`: gitleaks (секреты), CodeQL (SAST, JS/TS), аудит зависимостей (воркер — чистый `npm audit`, фронт — `audit-ci` с allowlist). Все `uses:` в workflows запинены на SHA (без Dependabot обновляются вручную). Заголовки фронта — `frontend/public/_headers`, копируется в корень сборки. CSP жёсткий и руками поддерживается: единственные внешние источники — сам воркер в `connect-src` (дублируется из `CLOUDFLARE_WORKER_URL`, менять оба места) и `'unsafe-inline'` в `script-src`/`style-src` под инлайновый конфиг Nuxt и CSS иконок. Шрифты self-hosted, Google Fonts из источников убран.
+Безопасность CI — отдельно в `.github/workflows/security.yml`: gitleaks (секреты), CodeQL (SAST, JS/TS), аудит зависимостей (воркер — чистый `npm audit`, фронт — `audit-ci` с allowlist). Все `uses:` в workflows запинены на SHA (без Dependabot обновляются вручную).
+
+Кастомных security-заголовков (включая CSP) нет сознательно: GitHub Pages отдаёт файлы с фиксированным набором заголовков и `_headers`-файлы не поддерживает (это конвенция Cloudflare Pages / Netlify). Это приемлемо: во фронте нет `v-html`/`innerHTML`, Vue экранирует интерполяции, cookies/auth нет — XSS-поверхность минимальна. Путь возврата: переезд на Cloudflare Pages (там `_headers` оживёт) либо meta-tag CSP (без `frame-ancestors`/`report-uri`/`sandbox`).
+
+## Изображения карт
+
+Картинки живут в R2 за кастомным доменом и раздаются самим Cloudflare — воркер трафиком не нагружается, фронт тянет по 3 картинки на расклад напрямую. Всё в бесплатном тарифе R2 (10 ГБ, 10M чтений/мес).
+
+- Источник: `temp/Cards-png/*.png` (в репозиторий не коммитится, см. корневой `.gitignore`).
+- Конвертация: `temp/convert-webp.sh` (`cwebp -q 82`) → `temp/webp/tarot/*.webp`, 21 МБ → ~3 МБ. Имена 1-в-1, только расширение `.webp`.
+- Заливка: вручную через UI дашборда в `tarot/` бакета (79 файлов: 78 карт + `CardBacks.webp`). Автоматизации в CI нет сознательно — набор статичный.
+- Связка с кодом: `worker/src/tarot/deck.ts` хранит PNG-имена набора, `worker/src/tarot/images.ts` маппит их в WebP-ключи и строит абсолютные URL от `TAROT_IMAGE_BASE_URL`. API отдаёт `cards[].imageUrl` + `backImageUrl` (пустые строки, если base не задан, — фронт тогда рисует только текст).
+- Перевёрнутые карты — CSS `rotate-180` во фронте (`TarotCardImage.vue`), вторых файлов не нужно; рубашка показывается пока лицо грузится.
 
 Допустимые исключения аудита (`frontend/audit-ci.jsonc`, только без патчей upstream и с dev-only экспозицией): `GHSA-86w9-cpqp-85rv` (node-forge в dev-сервере Nuxt), `GHSA-vfj7-8cjw-p6xm` (braces в сборке). Пересматривать при появлении патчей; vitest держим на ^5 из-за `GHSA-82fw-gwwq-j7x9` в 3.x/4.x.
 

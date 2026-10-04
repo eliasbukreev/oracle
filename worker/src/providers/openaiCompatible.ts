@@ -88,7 +88,8 @@ export function createOpenAIChatProvider(
   config: OracleProviderConfig,
   fetchImpl: FetchImpl = fetch,
 ): OracleProvider {
-  const { apiKey, model, maxOutputTokens, temperature, timeoutMs } = config;
+  const { apiKey, model, maxOutputTokens, temperature, timeoutMs, imageBaseUrl } =
+    config;
 
   async function askTarot(input: TarotAskInput): Promise<ProviderAnswer> {
     const { question, drawnCards } = input;
@@ -138,7 +139,7 @@ export function createOpenAIChatProvider(
       const content = payload.choices?.[0]?.message?.content;
       const result =
         typeof content === "string"
-          ? parseSpreadResponse(content, drawnCards)
+          ? parseSpreadResponse(content, drawnCards, imageBaseUrl)
           : null;
 
       if (!result) {

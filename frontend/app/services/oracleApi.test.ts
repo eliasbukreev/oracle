@@ -11,6 +11,7 @@ const VALID_PAYLOAD = {
       position: "past",
       orientation: "upright",
       meaning: "Начало позади.",
+      imageUrl: "https://assets.test/tarot/00-TheFool.webp",
     },
     {
       id: "the-magician",
@@ -18,6 +19,7 @@ const VALID_PAYLOAD = {
       position: "present",
       orientation: "reversed",
       meaning: "Сила в руках.",
+      imageUrl: "https://assets.test/tarot/01-TheMagician.webp",
     },
     {
       id: "the-high-priestess",
@@ -25,9 +27,11 @@ const VALID_PAYLOAD = {
       position: "future",
       orientation: "upright",
       meaning: "Тайна рядом.",
+      imageUrl: "https://assets.test/tarot/02-TheHighPriestess.webp",
     },
   ],
   summary: "Итог расклада.",
+  backImageUrl: "https://assets.test/tarot/CardBacks.webp",
 };
 
 function mockFetchOnce(
@@ -88,15 +92,28 @@ describe("askOracle", () => {
   it("бросает oracle_unavailable при карте без положения", async () => {
     mockFetchOnce({
       cards: [
-        { id: "a", name: "А", position: "past", meaning: "x" },
-        { id: "b", name: "Б", position: "present", meaning: "y" },
-        { id: "c", name: "В", position: "future", meaning: "z" },
+        { id: "a", name: "А", position: "past", meaning: "x", imageUrl: "" },
+        { id: "b", name: "Б", position: "present", meaning: "y", imageUrl: "" },
+        { id: "c", name: "В", position: "future", meaning: "z", imageUrl: "" },
       ],
       summary: "s",
+      backImageUrl: "",
     });
     const error = (await captureError()) as OracleRequestError;
     expect(error).toBeInstanceOf(OracleRequestError);
     expect(error.code).toBe("oracle_unavailable");
+  });
+
+  it("принимает расклад без картинок (R2 не настроен)", async () => {
+    const textOnly = {
+      cards: VALID_PAYLOAD.cards.map((c) => ({ ...c, imageUrl: "" })),
+      summary: VALID_PAYLOAD.summary,
+      backImageUrl: "",
+    };
+    mockFetchOnce(textOnly);
+    const result = await askOracle("Учить ли Rust?", API_URL);
+    expect(result.backImageUrl).toBe("");
+    expect(result.cards[0]?.imageUrl).toBe("");
   });
 
   it("бросает oracle_unavailable при плохом теле 200", async () => {

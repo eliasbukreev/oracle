@@ -41,6 +41,7 @@ describe("GroqProvider", () => {
             position: "past",
             orientation: "upright",
             meaning: "Новое начало уже позади.",
+            imageUrl: "https://assets.test/tarot/00-TheFool.webp",
           },
           {
             id: "the-magician",
@@ -48,6 +49,7 @@ describe("GroqProvider", () => {
             position: "present",
             orientation: "reversed",
             meaning: "Сила растрачена впустую.",
+            imageUrl: "https://assets.test/tarot/01-TheMagician.webp",
           },
           {
             id: "the-high-priestess",
@@ -55,9 +57,11 @@ describe("GroqProvider", () => {
             position: "future",
             orientation: "upright",
             meaning: "Тайна раскроется скоро.",
+            imageUrl: "https://assets.test/tarot/02-TheHighPriestess.webp",
           },
         ],
         summary: "Прошлое отпустило, настоящее требует честности.",
+        backImageUrl: "https://assets.test/tarot/CardBacks.webp",
       },
     });
     expect(seenUrl).toBe("https://api.groq.com/openai/v1/chat/completions");

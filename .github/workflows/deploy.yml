@@ -6,9 +6,9 @@ on:
       - main
   pull_request:
     paths:
-      - 'worker/**'
-      - 'frontend/**'
-      - '.github/workflows/deploy.yml'
+      - "worker/**"
+      - "frontend/**"
+      - ".github/workflows/deploy.yml"
 
 permissions:
   contents: read
@@ -67,6 +67,7 @@ jobs:
           ORACLE_TEMPERATURE: ${{ vars.ORACLE_TEMPERATURE }}
           ORACLE_TIMEOUT: ${{ vars.ORACLE_TIMEOUT }}
           CORS_ALLOWED_ORIGINS: ${{ vars.CORS_ALLOWED_ORIGINS }}
+          TAROT_IMAGE_BASE_URL: ${{ vars.TAROT_IMAGE_BASE_URL }}
         run: |
           printf '%s' "$OPENROUTER_API_KEY" | npx wrangler secret put OPENROUTER_API_KEY
           printf '%s' "$GROQ_API_KEY" | npx wrangler secret put GROQ_API_KEY
@@ -78,7 +79,8 @@ jobs:
             --var "ORACLE_MAX_TOKENS:${ORACLE_MAX_TOKENS}" \
             --var "ORACLE_TEMPERATURE:${ORACLE_TEMPERATURE}" \
             --var "ORACLE_TIMEOUT:${ORACLE_TIMEOUT}" \
-            --var "CORS_ALLOWED_ORIGINS:${CORS_ALLOWED_ORIGINS}"
+            --var "CORS_ALLOWED_ORIGINS:${CORS_ALLOWED_ORIGINS}" \
+            --var "TAROT_IMAGE_BASE_URL:${TAROT_IMAGE_BASE_URL}"
 
   frontend:
     name: Build frontend

@@ -14,6 +14,7 @@ const VALID_RAW = {
   maxOutputTokens: "800",
   temperature: "0.8",
   timeoutSeconds: "20",
+  imageBaseUrl: "https://assets.test",
 };
 
 function validConfig(): OracleProviderConfig {
@@ -30,7 +31,19 @@ describe("createProviderConfig", () => {
       maxOutputTokens: 800,
       temperature: 0.8,
       timeoutMs: 20_000,
+      imageBaseUrl: "https://assets.test",
     });
+  });
+
+  it("нормализует base URL картинок и допускает пустой", () => {
+    expect(
+      createProviderConfig({ ...VALID_RAW, imageBaseUrl: "https://a.test/// " })
+        ?.imageBaseUrl,
+    ).toBe("https://a.test");
+    expect(
+      createProviderConfig({ ...VALID_RAW, imageBaseUrl: "   " })
+        ?.imageBaseUrl,
+    ).toBe("");
   });
 
   it.each([

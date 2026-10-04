@@ -12,6 +12,7 @@ const ANSWER: ProviderAnswer = {
         position: "past",
         orientation: "upright",
         meaning: "Начало.",
+        imageUrl: "",
       },
       {
         id: "the-magician",
@@ -19,6 +20,7 @@ const ANSWER: ProviderAnswer = {
         position: "present",
         orientation: "reversed",
         meaning: "Сила.",
+        imageUrl: "",
       },
       {
         id: "the-high-priestess",
@@ -26,9 +28,11 @@ const ANSWER: ProviderAnswer = {
         position: "future",
         orientation: "upright",
         meaning: "Тайна.",
+        imageUrl: "",
       },
     ],
     summary: "Итог.",
+    backImageUrl: "",
   },
 };
 

@@ -13,6 +13,7 @@ function makeEnv(overrides: Partial<Env> = {}): Env {
     ORACLE_TEMPERATURE: "0.8",
     ORACLE_TIMEOUT: "20",
     CORS_ALLOWED_ORIGINS: "http://localhost:3000",
+    TAROT_IMAGE_BASE_URL: "https://assets.test",
     ...overrides,
   };
 }
@@ -104,11 +105,21 @@ describe("worker fetch", () => {
 
     expect(res.status).toBe(200);
     const json = (await res.json()) as {
-      cards: Array<{ id: string }>;
+      cards: Array<{ id: string; imageUrl: string }>;
       summary: string;
+      backImageUrl: string;
     };
     expect(json.cards).toHaveLength(3);
     expect(json.summary).toBeTruthy();
+    for (const card of json.cards) {
+      expect(card.imageUrl.startsWith("https://assets.test/tarot/")).toBe(
+        true,
+      );
+      expect(card.imageUrl.endsWith(".webp")).toBe(true);
+    }
+    expect(json.backImageUrl).toBe(
+      "https://assets.test/tarot/CardBacks.webp",
+    );
     expect(seenUrl).toContain("openrouter.ai");
   });
 

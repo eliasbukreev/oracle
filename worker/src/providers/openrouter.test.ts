@@ -46,6 +46,7 @@ describe("OpenRouterProvider", () => {
             position: "past",
             orientation: "upright",
             meaning: "Новое начало уже позади.",
+            imageUrl: "https://assets.test/tarot/00-TheFool.webp",
           },
           {
             id: "the-magician",
@@ -53,6 +54,7 @@ describe("OpenRouterProvider", () => {
             position: "present",
             orientation: "reversed",
             meaning: "Сила растрачена впустую.",
+            imageUrl: "https://assets.test/tarot/01-TheMagician.webp",
           },
           {
             id: "the-high-priestess",
@@ -60,9 +62,11 @@ describe("OpenRouterProvider", () => {
             position: "future",
             orientation: "upright",
             meaning: "Тайна раскроется скоро.",
+            imageUrl: "https://assets.test/tarot/02-TheHighPriestess.webp",
           },
         ],
         summary: "Прошлое отпустило, настоящее требует честности.",
+        backImageUrl: "https://assets.test/tarot/CardBacks.webp",
       },
     });
     expect(seenUrl).toBe("https://openrouter.ai/api/v1/chat/completions");

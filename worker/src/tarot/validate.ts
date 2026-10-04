@@ -1,5 +1,3 @@
-// Узел workflow "validate": строгая проверка расклада от LLM.
-// Сверяет id/позиции/положение с вытянутыми сервером — защита от галлюцинаций.
 import { MAX_RESPONSE_FIELD_LENGTH } from "../oracle";
 import type {
   DrawnCard,
@@ -7,6 +5,7 @@ import type {
   TarotPosition,
   TarotResponse,
 } from "../types";
+import { buildTarotCard, tarotBackImageUrl } from "./images";
 
 export const TAROT_POSITIONS: readonly TarotPosition[] = [
   "past",
@@ -45,6 +44,9 @@ export function isTarotResponse(value: unknown): value is TarotResponse {
     return false;
   }
 
+  // URL картинок — строки; пустые допустимы (R2 не настроен, фронт рисует текст).
+  if (typeof result.backImageUrl !== "string") return false;
+
   for (const card of result.cards) {
     if (!card || typeof card !== "object") return false;
     const c = card as Record<string, unknown>;
@@ -57,7 +59,8 @@ export function isTarotResponse(value: unknown): value is TarotResponse {
       c.name.length > 120 ||
       !isPosition(c.position) ||
       !isOrientation(c.orientation) ||
-      !isValidMeaning(c.meaning)
+      !isValidMeaning(c.meaning) ||
+      typeof c.imageUrl !== "string"
     ) {
       return false;
     }
@@ -74,10 +77,11 @@ function stripFences(content: string): string {
 }
 
 /** Парсит сырой ответ модели и сверяет с вытянутыми картами.
- *  Имя берётся из канона (drawnCards), а не из ответа модели. */
+ *  Имя и URL картинки берутся из канона (drawnCards + deck), а не из модели. */
 export function parseSpreadResponse(
   content: string,
   expected: DrawnCard[],
+  imageBaseUrl = "",
 ): TarotResponse | null {
   let parsed: unknown;
 
@@ -125,14 +129,14 @@ export function parseSpreadResponse(
     }
     if (!isValidMeaning(got.meaning)) return null;
 
-    cards.push({
-      id: want.id,
-      name: want.name,
-      position: want.position,
-      orientation: want.orientation,
-      meaning: (got.meaning as string).trim(),
-    });
+    cards.push(
+      buildTarotCard(want, (got.meaning as string).trim(), imageBaseUrl),
+    );
   }
 
-  return { cards, summary: (raw.summary as string).trim() };
+  return {
+    cards,
+    summary: (raw.summary as string).trim(),
+    backImageUrl: tarotBackImageUrl(imageBaseUrl),
+  };
 }

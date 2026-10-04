@@ -21,19 +21,22 @@ export interface TarotAskInput {
   drawnCards: DrawnCard[];
 }
 
-/** Одна карта в ответе API: id для маппинга на изображения, name для текста. */
+/** Одна карта в ответе API: imageUrl — абсолютный URL картинки в R2
+ *  (пустая строка, если хранилище не настроено — фронт рисует текст). */
 export interface TarotCard {
   id: string;
   name: string;
   position: TarotPosition;
   orientation: TarotOrientation;
   meaning: string;
+  imageUrl: string;
 }
 
 /** Расклад из трёх карт — ответ API. */
 export interface TarotResponse {
   cards: TarotCard[];
   summary: string;
+  backImageUrl: string;
 }
 
 /** Нормализованный конфиг LLM-провайдера. Парсится из строк окружения
@@ -44,6 +47,8 @@ export interface OracleProviderConfig {
   maxOutputTokens: number;
   temperature: number;
   timeoutMs: number;
+  /** Base URL картинок (R2 за кастомным доменом). Пусто = без картинок. */
+  imageBaseUrl: string;
 }
 
 export type FetchImpl = typeof fetch;

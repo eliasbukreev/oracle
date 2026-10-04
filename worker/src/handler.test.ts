@@ -18,6 +18,7 @@ const SPREAD: TarotResponse = {
       position: "past",
       orientation: "upright",
       meaning: "Начало позади.",
+      imageUrl: "https://assets.test/tarot/00-TheFool.webp",
     },
     {
       id: "the-magician",
@@ -25,6 +26,7 @@ const SPREAD: TarotResponse = {
       position: "present",
       orientation: "reversed",
       meaning: "Сила в руках.",
+      imageUrl: "https://assets.test/tarot/01-TheMagician.webp",
     },
     {
       id: "the-high-priestess",
@@ -32,9 +34,11 @@ const SPREAD: TarotResponse = {
       position: "future",
       orientation: "upright",
       meaning: "Тайна рядом.",
+      imageUrl: "https://assets.test/tarot/02-TheHighPriestess.webp",
     },
   ],
   summary: "Итог расклада.",
+  backImageUrl: "https://assets.test/tarot/CardBacks.webp",
 };
 
 function stubProvider(answer: ProviderAnswer): OracleProvider {

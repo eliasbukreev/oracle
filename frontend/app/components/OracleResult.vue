@@ -20,6 +20,12 @@ defineProps<{
         :key="card.id"
         class="mt-4 rounded-card border border-edge-soft/14 bg-black/20 p-4"
       >
+        <TarotCardImage
+          :src="card.imageUrl"
+          :back-src="result.backImageUrl"
+          :alt="card.name"
+          :reversed="card.orientation === 'reversed'"
+        />
         <div class="text-caption font-semibold tracking-overline text-overline uppercase">
           {{ TAROT_POSITION_LABELS_RU[card.position] }}
         </div>
