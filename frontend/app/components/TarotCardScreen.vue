@@ -37,7 +37,7 @@ const isLast = computed(() => props.index >= 2);
     </div>
 
     <div class="grid gap-5 sm:grid-cols-[180px_1fr] sm:items-start">
-      <TarotCardImage
+      <TarotFlipCard
         :src="card.imageUrl"
         :back-src="backImageUrl"
         :alt="card.name"

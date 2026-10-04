@@ -1,6 +1,12 @@
 <script setup lang="ts">
-import { motion } from 'motion-v'
-import { SCREEN_TRANSITION } from '~/services/screenMotion'
+import { motion } from "motion-v";
+import backUrl from "~/assets/img/CardBacks.webp?url";
+import { SCREEN_TRANSITION } from "~/services/screenMotion";
+
+// Рубашка предзагружается со стартом: к экрану карты уже в кэше, мигания нет.
+useHead({
+  link: [{ rel: "preload", as: "image", href: backUrl }],
+});
 
 const {
   result,
@@ -17,21 +23,28 @@ const {
   nextCard,
   reset,
   preview,
-} = useTarotFlow()
+} = useTarotFlow();
 
-const isDev = import.meta.dev
+const isDev = import.meta.dev;
 // Асинхронно и только в dev: в прод-бандл панель не попадает вообще.
 const DevPreviewBar = isDev
   ? defineAsyncComponent(() => import("~/components/DevPreviewBar.vue"))
-  : null
-const isWideScreen = computed(() => screen.value === 'card' || screen.value === 'finale')
-const currentCard = computed(() => result.value?.cards[cardIndex.value])
+  : null;
+const isWideScreen = computed(
+  () => screen.value === "card" || screen.value === "finale",
+);
+const currentCard = computed(() => result.value?.cards[cardIndex.value]);
 </script>
 
 <template>
   <MotionConfig reduced-motion="user">
-    <main class="starfield relative grid min-h-screen place-items-center overflow-hidden bg-ink px-5 py-12 max-phone:px-3.5 max-phone:py-5">
-      <div class="pointer-events-none absolute top-[12%] left-1/2 h-[400px] w-[500px] -translate-x-1/2 rounded-full bg-glow opacity-20 blur-[110px]" aria-hidden="true" />
+    <main
+      class="starfield relative grid min-h-screen place-items-center overflow-hidden bg-ink px-5 py-12 max-phone:px-3.5 max-phone:py-5"
+    >
+      <div
+        class="pointer-events-none absolute top-[12%] left-1/2 h-[400px] w-[500px] -translate-x-1/2 rounded-full bg-glow opacity-20 blur-[110px]"
+        aria-hidden="true"
+      />
 
       <section
         class="relative z-[1] w-full border border-edge bg-panel/90 px-13 pt-12 pb-7.5 shadow-panel backdrop-blur-[14px] transition-[max-width] duration-300 max-phone:px-5 max-phone:pt-8.5 max-phone:pb-6"
@@ -71,7 +84,9 @@ const currentCard = computed(() => result.value?.cards[cardIndex.value])
           </motion.div>
         </AnimatePresence>
 
-        <footer class="mt-7.5 text-center text-caption text-faint">Ответы приходят тем, кто готов их принять</footer>
+        <footer class="mt-7.5 text-center text-caption text-faint">
+          Ответы приходят тем, кто готов их принять
+        </footer>
       </section>
 
       <component

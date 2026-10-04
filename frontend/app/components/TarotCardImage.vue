@@ -1,12 +1,19 @@
 <script setup lang="ts">
-const props = defineProps<{
-  /** URL лицевой стороны из R2. Пусто = хранилище не настроено. */
-  src: string;
-  /** URL рубашки. Пусто = нет даже рубашки. */
-  backSrc: string;
-  alt: string;
-  reversed?: boolean;
-}>();
+import backUrl from "~/assets/img/CardBacks.webp?url";
+
+const props = withDefaults(
+  defineProps<{
+    /** URL лицевой стороны из R2. Пусто = хранилище не настроено. */
+    src: string;
+    /** URL рубашки. По умолчанию — бандловая (грузится мгновенно, без мигания). */
+    backSrc?: string;
+    alt: string;
+    reversed?: boolean;
+  }>(),
+  {
+    backSrc: backUrl,
+  },
+);
 
 const loaded = ref(false);
 const failed = ref(false);
@@ -19,13 +26,13 @@ const showFace = computed(() => props.src && !failed.value);
     v-if="src || backSrc"
     class="m-0 mb-3 aspect-[300/527] w-full overflow-hidden border border-brass-line/70 bg-black/30 shadow-card"
   >
-    <!-- Рубашка: видна пока лицо грузится или если оно не загрузилось -->
+    <!-- Рубашка: бандловая, уже предзагружена — видна пока лицо грузится
+         или если оно не загрузилось -->
     <img
       v-if="backSrc && (!loaded || !showFace)"
       :src="backSrc"
       alt=""
       aria-hidden="true"
-      loading="lazy"
       decoding="async"
       class="h-full w-full object-cover opacity-60"
     >
