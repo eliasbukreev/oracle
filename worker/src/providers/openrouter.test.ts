@@ -44,22 +44,25 @@ describe("OpenRouterProvider", () => {
             id: "the-fool",
             name: "Шут",
             position: "past",
+            orientation: "upright",
             meaning: "Новое начало уже позади.",
           },
           {
             id: "the-magician",
             name: "Маг",
             position: "present",
-            meaning: "Всё в твоих руках.",
+            orientation: "reversed",
+            meaning: "Сила растрачена впустую.",
           },
           {
             id: "the-high-priestess",
             name: "Верховная Жрица",
             position: "future",
+            orientation: "upright",
             meaning: "Тайна раскроется скоро.",
           },
         ],
-        summary: "Прошлое отпустило, настоящее в твоей власти.",
+        summary: "Прошлое отпустило, настоящее требует честности.",
       },
     });
     expect(seenUrl).toBe("https://openrouter.ai/api/v1/chat/completions");
@@ -191,9 +194,53 @@ describe("OpenRouterProvider", () => {
   it("возвращает null при подмене id моделью", async () => {
     const bad = JSON.stringify({
       cards: [
-        { id: "death", position: "past", meaning: "x" },
-        { id: "the-magician", position: "present", meaning: "y" },
-        { id: "the-high-priestess", position: "future", meaning: "z" },
+        { id: "death", position: "past", orientation: "upright", meaning: "x" },
+        {
+          id: "the-magician",
+          position: "present",
+          orientation: "reversed",
+          meaning: "y",
+        },
+        {
+          id: "the-high-priestess",
+          position: "future",
+          orientation: "upright",
+          meaning: "z",
+        },
+      ],
+      summary: "s",
+    });
+    const provider = createOpenRouterProvider(
+      validConfig(),
+      fakeFetch(() => openRouterOk(bad)),
+    );
+    expect(await provider.askTarot(validTarotInput())).toEqual({
+      ok: false,
+      blocked: false,
+    });
+  });
+
+  it("возвращает null при подмене положения моделью", async () => {
+    const bad = JSON.stringify({
+      cards: [
+        {
+          id: "the-fool",
+          position: "past",
+          orientation: "reversed",
+          meaning: "x",
+        },
+        {
+          id: "the-magician",
+          position: "present",
+          orientation: "reversed",
+          meaning: "y",
+        },
+        {
+          id: "the-high-priestess",
+          position: "future",
+          orientation: "upright",
+          meaning: "z",
+        },
       ],
       summary: "s",
     });

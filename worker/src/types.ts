@@ -4,11 +4,15 @@
 /** Позиция карты в раскладе из трёх карт. */
 export type TarotPosition = "past" | "present" | "future";
 
+/** Положение карты: прямая или перевёрнутая. Тянет сервер монеткой. */
+export type TarotOrientation = "upright" | "reversed";
+
 /** Карта, вытянутая сервером до обращения к LLM. Имя каноническое. */
 export interface DrawnCard {
   id: string;
   name: string;
   position: TarotPosition;
+  orientation: TarotOrientation;
 }
 
 /** Вход провайдера: вопрос + уже вытянутые карты. */
@@ -22,6 +26,7 @@ export interface TarotCard {
   id: string;
   name: string;
   position: TarotPosition;
+  orientation: TarotOrientation;
   meaning: string;
 }
 

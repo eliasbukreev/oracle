@@ -9,22 +9,43 @@ import type {
 } from "../types";
 
 export const DRAWN_CARDS: DrawnCard[] = [
-  { id: "the-fool", name: "Шут", position: "past" },
-  { id: "the-magician", name: "Маг", position: "present" },
-  { id: "the-high-priestess", name: "Верховная Жрица", position: "future" },
+  { id: "the-fool", name: "Шут", position: "past", orientation: "upright" },
+  {
+    id: "the-magician",
+    name: "Маг",
+    position: "present",
+    orientation: "reversed",
+  },
+  {
+    id: "the-high-priestess",
+    name: "Верховная Жрица",
+    position: "future",
+    orientation: "upright",
+  },
 ];
 
 export const VALID_TAROT_JSON = JSON.stringify({
   cards: [
-    { id: "the-fool", position: "past", meaning: "Новое начало уже позади." },
-    { id: "the-magician", position: "present", meaning: "Всё в твоих руках." },
+    {
+      id: "the-fool",
+      position: "past",
+      orientation: "upright",
+      meaning: "Новое начало уже позади.",
+    },
+    {
+      id: "the-magician",
+      position: "present",
+      orientation: "reversed",
+      meaning: "Сила растрачена впустую.",
+    },
     {
       id: "the-high-priestess",
       position: "future",
+      orientation: "upright",
       meaning: "Тайна раскроется скоро.",
     },
   ],
-  summary: "Прошлое отпустило, настоящее в твоей власти.",
+  summary: "Прошлое отпустило, настоящее требует честности.",
 });
 
 export const VALID_RAW = {

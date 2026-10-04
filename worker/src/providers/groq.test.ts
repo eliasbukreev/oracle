@@ -39,22 +39,25 @@ describe("GroqProvider", () => {
             id: "the-fool",
             name: "Шут",
             position: "past",
+            orientation: "upright",
             meaning: "Новое начало уже позади.",
           },
           {
             id: "the-magician",
             name: "Маг",
             position: "present",
-            meaning: "Всё в твоих руках.",
+            orientation: "reversed",
+            meaning: "Сила растрачена впустую.",
           },
           {
             id: "the-high-priestess",
             name: "Верховная Жрица",
             position: "future",
+            orientation: "upright",
             meaning: "Тайна раскроется скоро.",
           },
         ],
-        summary: "Прошлое отпустило, настоящее в твоей власти.",
+        summary: "Прошлое отпустило, настоящее требует честности.",
       },
     });
     expect(seenUrl).toBe("https://api.groq.com/openai/v1/chat/completions");

@@ -12,12 +12,25 @@ import type {
 
 const SPREAD: TarotResponse = {
   cards: [
-    { id: "the-fool", name: "Шут", position: "past", meaning: "Начало позади." },
-    { id: "the-magician", name: "Маг", position: "present", meaning: "Сила в руках." },
+    {
+      id: "the-fool",
+      name: "Шут",
+      position: "past",
+      orientation: "upright",
+      meaning: "Начало позади.",
+    },
+    {
+      id: "the-magician",
+      name: "Маг",
+      position: "present",
+      orientation: "reversed",
+      meaning: "Сила в руках.",
+    },
     {
       id: "the-high-priestess",
       name: "Верховная Жрица",
       position: "future",
+      orientation: "upright",
       meaning: "Тайна рядом.",
     },
   ],

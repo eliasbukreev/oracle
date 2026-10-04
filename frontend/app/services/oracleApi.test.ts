@@ -5,12 +5,25 @@ const API_URL = "https://oracle.test/";
 
 const VALID_PAYLOAD = {
   cards: [
-    { id: "the-fool", name: "Шут", position: "past", meaning: "Начало позади." },
-    { id: "the-magician", name: "Маг", position: "present", meaning: "Сила в руках." },
+    {
+      id: "the-fool",
+      name: "Шут",
+      position: "past",
+      orientation: "upright",
+      meaning: "Начало позади.",
+    },
+    {
+      id: "the-magician",
+      name: "Маг",
+      position: "present",
+      orientation: "reversed",
+      meaning: "Сила в руках.",
+    },
     {
       id: "the-high-priestess",
       name: "Верховная Жрица",
       position: "future",
+      orientation: "upright",
       meaning: "Тайна рядом.",
     },
   ],
@@ -70,6 +83,20 @@ describe("askOracle", () => {
     expect(url).toBe(API_URL);
     expect(init?.method).toBe("POST");
     expect(init?.body).toBe(JSON.stringify({ question: "Учить ли Rust?" }));
+  });
+
+  it("бросает oracle_unavailable при карте без положения", async () => {
+    mockFetchOnce({
+      cards: [
+        { id: "a", name: "А", position: "past", meaning: "x" },
+        { id: "b", name: "Б", position: "present", meaning: "y" },
+        { id: "c", name: "В", position: "future", meaning: "z" },
+      ],
+      summary: "s",
+    });
+    const error = (await captureError()) as OracleRequestError;
+    expect(error).toBeInstanceOf(OracleRequestError);
+    expect(error.code).toBe("oracle_unavailable");
   });
 
   it("бросает oracle_unavailable при плохом теле 200", async () => {

@@ -1,7 +1,12 @@
 // Узел workflow "validate": строгая проверка расклада от LLM.
-// Сверяет id/позиции с вытянутыми сервером — защита от галлюцинаций имён.
+// Сверяет id/позиции/положение с вытянутыми сервером — защита от галлюцинаций.
 import { MAX_RESPONSE_FIELD_LENGTH } from "../oracle";
-import type { DrawnCard, TarotPosition, TarotResponse } from "../types";
+import type {
+  DrawnCard,
+  TarotOrientation,
+  TarotPosition,
+  TarotResponse,
+} from "../types";
 
 export const TAROT_POSITIONS: readonly TarotPosition[] = [
   "past",
@@ -11,6 +16,10 @@ export const TAROT_POSITIONS: readonly TarotPosition[] = [
 
 function isPosition(value: unknown): value is TarotPosition {
   return value === "past" || value === "present" || value === "future";
+}
+
+function isOrientation(value: unknown): value is TarotOrientation {
+  return value === "upright" || value === "reversed";
 }
 
 function isValidMeaning(value: unknown): value is string {
@@ -47,6 +56,7 @@ export function isTarotResponse(value: unknown): value is TarotResponse {
       !c.name.trim() ||
       c.name.length > 120 ||
       !isPosition(c.position) ||
+      !isOrientation(c.orientation) ||
       !isValidMeaning(c.meaning)
     ) {
       return false;
@@ -80,7 +90,12 @@ export function parseSpreadResponse(
   if (!parsed || typeof parsed !== "object") return null;
 
   const raw = parsed as {
-    cards?: Array<{ id?: unknown; position?: unknown; meaning?: unknown }>;
+    cards?: Array<{
+      id?: unknown;
+      position?: unknown;
+      orientation?: unknown;
+      meaning?: unknown;
+    }>;
     summary?: unknown;
   };
 
@@ -100,14 +115,21 @@ export function parseSpreadResponse(
     const want = expected[i];
     if (!got || !want) return null;
 
-    // Строгое соответствие вытянутому: тот же id и та же позиция, тот же порядок.
-    if (got.id !== want.id || got.position !== want.position) return null;
+    // Строгое соответствие вытянутому: те же id, позиция и положение, тот же порядок.
+    if (
+      got.id !== want.id ||
+      got.position !== want.position ||
+      got.orientation !== want.orientation
+    ) {
+      return null;
+    }
     if (!isValidMeaning(got.meaning)) return null;
 
     cards.push({
       id: want.id,
       name: want.name,
       position: want.position,
+      orientation: want.orientation,
       meaning: (got.meaning as string).trim(),
     });
   }

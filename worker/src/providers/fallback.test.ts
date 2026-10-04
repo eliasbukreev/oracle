@@ -6,12 +6,25 @@ const ANSWER: ProviderAnswer = {
   ok: true,
   response: {
     cards: [
-      { id: "the-fool", name: "Шут", position: "past", meaning: "Начало." },
-      { id: "the-magician", name: "Маг", position: "present", meaning: "Сила." },
+      {
+        id: "the-fool",
+        name: "Шут",
+        position: "past",
+        orientation: "upright",
+        meaning: "Начало.",
+      },
+      {
+        id: "the-magician",
+        name: "Маг",
+        position: "present",
+        orientation: "reversed",
+        meaning: "Сила.",
+      },
       {
         id: "the-high-priestess",
         name: "Верховная Жрица",
         position: "future",
+        orientation: "upright",
         meaning: "Тайна.",
       },
     ],
@@ -22,9 +35,19 @@ const ANSWER: ProviderAnswer = {
 const INPUT: TarotAskInput = {
   question: "Учить ли Rust?",
   drawnCards: [
-    { id: "the-fool", name: "Шут", position: "past" },
-    { id: "the-magician", name: "Маг", position: "present" },
-    { id: "the-high-priestess", name: "Верховная Жрица", position: "future" },
+    { id: "the-fool", name: "Шут", position: "past", orientation: "upright" },
+    {
+      id: "the-magician",
+      name: "Маг",
+      position: "present",
+      orientation: "reversed",
+    },
+    {
+      id: "the-high-priestess",
+      name: "Верховная Жрица",
+      position: "future",
+      orientation: "upright",
+    },
   ],
 };
 

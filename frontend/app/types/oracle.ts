@@ -1,9 +1,12 @@
 export type TarotPosition = 'past' | 'present' | 'future'
 
+export type TarotOrientation = 'upright' | 'reversed'
+
 export type TarotCard = {
   id: string
   name: string
   position: TarotPosition
+  orientation: TarotOrientation
   meaning: string
 }
 
@@ -19,6 +22,11 @@ export const TAROT_POSITION_LABELS_RU: Record<TarotPosition, string> = {
   past: 'Прошлое',
   present: 'Настоящее',
   future: 'Будущее',
+}
+
+export const TAROT_ORIENTATION_LABELS_RU: Record<TarotOrientation, string> = {
+  upright: 'Прямая',
+  reversed: 'Перевёрнутая',
 }
 
 export type OracleErrorCode =

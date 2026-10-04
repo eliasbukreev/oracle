@@ -1,4 +1,9 @@
-import type { OracleErrorCode, TarotCard, TarotResponse } from "~/types/oracle";
+import type {
+  OracleErrorCode,
+  TarotCard,
+  TarotOrientation,
+  TarotResponse,
+} from "~/types/oracle";
 
 const ASK_TIMEOUT_MS = 40000;
 
@@ -48,6 +53,10 @@ function isTarotPosition(value: unknown): value is TarotCard["position"] {
   return value === "past" || value === "present" || value === "future";
 }
 
+function isTarotOrientation(value: unknown): value is TarotOrientation {
+  return value === "upright" || value === "reversed";
+}
+
 function isTarotCard(value: unknown): value is TarotCard {
   if (!value || typeof value !== "object") {
     return false;
@@ -61,6 +70,7 @@ function isTarotCard(value: unknown): value is TarotCard {
     typeof card.name === "string" &&
     card.name.length > 0 &&
     isTarotPosition(card.position) &&
+    isTarotOrientation(card.orientation) &&
     typeof card.meaning === "string" &&
     card.meaning.length > 0
   );

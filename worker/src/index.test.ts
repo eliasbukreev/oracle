@@ -25,69 +25,40 @@ function postRequest(): Request {
   });
 }
 
-// Динамический мок LLM: читает вытянутые id из промта и эхом возвращает их.
-// Нужно, т.к. карты тянет сервер случайно через cryptoRandom.
-function tarotEcho(): Response {
-  return new Response(
-    JSON.stringify({
-      choices: [
-        {
-          message: {
-            role: "assistant",
-            content: "__ECHO_TAROT__",
-          },
+// Динамический мок LLM: читает вытянутые карты (id, позицию, положение)
+// из промта и эхом возвращает их. Нужно, т.к. карты тянет сервер случайно.
+function echoSpreadResponse(content: string): Response {
+  const triples = [
+    ...String(content).matchAll(
+      /\[(past|present|future)[^\]]*\] [^(]*\(id: ([a-z-]+)\), положение: (ПРЯМАЯ|ПЕРЕВЁРНУТАЯ)/g,
+    ),
+  ];
+  const cards = triples.map((m) => ({
+    id: m[2],
+    position: m[1],
+    orientation: m[3] === "ПРЯМАЯ" ? "upright" : "reversed",
+    meaning: `Толкование ${m[2]}.`,
+  }));
+  const payload = {
+    choices: [
+      {
+        message: {
+          role: "assistant",
+          content: JSON.stringify({ cards, summary: "Общий вывод." }),
         },
-      ],
-    }),
-    { status: 200 },
-  );
+      },
+    ],
+  };
+  return new Response(JSON.stringify(payload), { status: 200 });
 }
 
-function stubChatFetch(
-  respond: (url: string, body: unknown) => Response = () => tarotEcho(),
-) {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
-      const url = String(input);
-      let body: unknown = null;
-      try {
-        body = init?.body ? JSON.parse(String(init.body)) : null;
-      } catch {
-        body = null;
-      }
-
-      const content =
-        (body as { messages?: Array<{ content?: string }> } | null)
-          ?.messages?.[0]?.content ?? "";
-
-      // Если провайдер прислал промт с id — отвечаем валидным раскладом по тем же id.
-      const ids = [...content.matchAll(/\(id: ([a-z-]+)\)/g)].map((m) => m[1]);
-      if (ids.length === 3) {
-        const positions = ["past", "present", "future"];
-        const payload = {
-          choices: [
-            {
-              message: {
-                role: "assistant",
-                content: JSON.stringify({
-                  cards: ids.map((id, i) => ({
-                    id,
-                    position: positions[i],
-                    meaning: `Толкование ${id}.`,
-                  })),
-                  summary: "Общий вывод.",
-                }),
-              },
-            },
-          ],
-        };
-        return new Response(JSON.stringify(payload), { status: 200 });
-      }
-
-      return respond(url, body);
-    }),
-  );
+function promptContent(init?: RequestInit): string {
+  try {
+    const body = init?.body ? JSON.parse(String(init.body)) : null;
+    return String(body?.messages?.[0]?.content ?? "");
+  } catch {
+    return "";
+  }
 }
 
 beforeEach(() => {
@@ -125,29 +96,7 @@ describe("worker fetch", () => {
       "fetch",
       vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
         seenUrl = String(input);
-        const body = init?.body ? JSON.parse(String(init.body)) : null;
-        const content = body?.messages?.[0]?.content ?? "";
-        const ids = [...String(content).matchAll(/\(id: ([a-z-]+)\)/g)].map(
-          (m) => m[1],
-        );
-        const payload = {
-          choices: [
-            {
-              message: {
-                role: "assistant",
-                content: JSON.stringify({
-                  cards: ids.map((id, i) => ({
-                    id,
-                    position: ["past", "present", "future"][i],
-                    meaning: `Толкование ${id}.`,
-                  })),
-                  summary: "Общий вывод.",
-                }),
-              },
-            },
-          ],
-        };
-        return new Response(JSON.stringify(payload), { status: 200 });
+        return echoSpreadResponse(promptContent(init));
       }),
     );
 
@@ -185,31 +134,7 @@ describe("worker fetch", () => {
         const url = String(input);
         seenUrls.push(url);
         if (url.includes("groq")) {
-          const body = init?.body ? JSON.parse(String(init.body)) : null;
-          const content = String(body?.messages?.[0]?.content ?? "");
-          const ids = [...content.matchAll(/\(id: ([a-z-]+)\)/g)].map(
-            (m) => m[1],
-          );
-          return new Response(
-            JSON.stringify({
-              choices: [
-                {
-                  message: {
-                    role: "assistant",
-                    content: JSON.stringify({
-                      cards: ids.map((id, i) => ({
-                        id,
-                        position: ["past", "present", "future"][i],
-                        meaning: `Толкование ${id}.`,
-                      })),
-                      summary: "Общий вывод.",
-                    }),
-                  },
-                },
-              ],
-            }),
-            { status: 200 },
-          );
+          return echoSpreadResponse(promptContent(init));
         }
         return new Response("{}", { status: 500 });
       }),
@@ -229,31 +154,7 @@ describe("worker fetch", () => {
   });
 
   it("fallback: при 403 от OpenRouter спрашивает Groq", async () => {
-    stubChatFetch((url) =>
-      url.includes("groq")
-        ? new Response(
-            JSON.stringify({
-              choices: [
-                {
-                  message: {
-                    role: "assistant",
-                    content: JSON.stringify({
-                      cards: [
-                        { id: "a", position: "past", meaning: "x" },
-                        { id: "b", position: "present", meaning: "y" },
-                        { id: "c", position: "future", meaning: "z" },
-                      ],
-                      summary: "s",
-                    }),
-                  },
-                },
-              ],
-            }),
-            { status: 200 },
-          )
-        : new Response("forbidden", { status: 403 }),
-    );
-    // Простой счётчик для этого кейса: первый вызов 403, второй — эхо.
+    // Первый вызов 403, второй — эхо.
     const seenUrls: string[] = [];
     vi.stubGlobal(
       "fetch",
@@ -263,31 +164,7 @@ describe("worker fetch", () => {
         if (!url.includes("groq")) {
           return new Response("forbidden", { status: 403 });
         }
-        const body = init?.body ? JSON.parse(String(init.body)) : null;
-        const content = String(body?.messages?.[0]?.content ?? "");
-        const ids = [...content.matchAll(/\(id: ([a-z-]+)\)/g)].map(
-          (m) => m[1],
-        );
-        return new Response(
-          JSON.stringify({
-            choices: [
-              {
-                message: {
-                  role: "assistant",
-                  content: JSON.stringify({
-                    cards: ids.map((id, i) => ({
-                      id,
-                      position: ["past", "present", "future"][i],
-                      meaning: `Толкование ${id}.`,
-                    })),
-                    summary: "Общий вывод.",
-                  }),
-                },
-              },
-            ],
-          }),
-          { status: 200 },
-        );
+        return echoSpreadResponse(promptContent(init));
       }),
     );
 
@@ -332,36 +209,11 @@ describe("worker fetch", () => {
   });
 
   it("битый fallback-конфиг не ломает primary", async () => {
-    stubChatFetch();
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
-        const body = init?.body ? JSON.parse(String(init.body)) : null;
-        const content = String(body?.messages?.[0]?.content ?? "");
-        const ids = [...content.matchAll(/\(id: ([a-z-]+)\)/g)].map(
-          (m) => m[1],
-        );
-        return new Response(
-          JSON.stringify({
-            choices: [
-              {
-                message: {
-                  role: "assistant",
-                  content: JSON.stringify({
-                    cards: ids.map((id, i) => ({
-                      id,
-                      position: ["past", "present", "future"][i],
-                      meaning: `Толкование ${id}.`,
-                    })),
-                    summary: "Общий вывод.",
-                  }),
-                },
-              },
-            ],
-          }),
-          { status: 200 },
-        );
-      }),
+      vi.fn(async (input: string | URL | Request, init?: RequestInit) =>
+        echoSpreadResponse(promptContent(init)),
+      ),
     );
 
     const res = await worker.fetch(

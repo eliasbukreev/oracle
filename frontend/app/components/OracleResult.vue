@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { TarotResponse } from '~/types/oracle'
-import { TAROT_POSITION_LABELS_RU } from '~/types/oracle'
+import { TAROT_ORIENTATION_LABELS_RU, TAROT_POSITION_LABELS_RU } from '~/types/oracle'
 
 defineProps<{
   result: TarotResponse
@@ -24,6 +24,12 @@ defineProps<{
           {{ TAROT_POSITION_LABELS_RU[card.position] }}
         </div>
         <div class="font-display my-2 text-lead tracking-verdict text-verdict">{{ card.name }}</div>
+        <span
+          class="mb-2 inline-block rounded-full border border-edge-soft/14 px-2 py-0.5 text-caption"
+          :class="card.orientation === 'reversed' ? 'text-confidence' : 'text-reason-ink'"
+        >
+          {{ TAROT_ORIENTATION_LABELS_RU[card.orientation] }}
+        </span>
         <p class="m-0 text-note leading-[1.55] text-prophecy">{{ card.meaning }}</p>
       </li>
     </ol>
