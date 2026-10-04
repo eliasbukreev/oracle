@@ -1,5 +1,6 @@
 import { isRateLimited, jsonResponse } from "./http";
-import { parseQuestion } from "./oracle";
+import { cryptoRandom } from "./tarot/draw";
+import { runTarotWorkflow } from "./tarot/workflow";
 import type { OracleDeps } from "./types";
 
 export const RATE_LIMIT_WINDOW_SECONDS = 60;
@@ -76,21 +77,21 @@ export async function handleAsk(
     return respond(request, deps, 400, { error: "invalid_request" });
   }
 
-  const question = parseQuestion(payload);
+  const answer = await runTarotWorkflow(payload, {
+    provider: deps.provider,
+    randomFn: deps.randomFn ?? cryptoRandom,
+  });
 
-  if (!question) {
+  if (!answer.ok && "error" in answer) {
     return respond(request, deps, 400, { error: "invalid_request" });
   }
 
-  const answer = await deps.provider.ask(question);
-
-  if (answer.ok) {
-    return respond(request, deps, 200, answer.response);
+  if (!answer.ok) {
+    if (answer.blocked) {
+      return respond(request, deps, 403, { error: "blocked" });
+    }
+    return respond(request, deps, 502, { error: "oracle_unavailable" });
   }
 
-  if (answer.blocked) {
-    return respond(request, deps, 403, { error: "blocked" });
-  }
-
-  return respond(request, deps, 502, { error: "oracle_unavailable" });
+  return respond(request, deps, 200, answer.response);
 }

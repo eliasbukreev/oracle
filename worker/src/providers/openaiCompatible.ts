@@ -1,10 +1,12 @@
-import { oraclePrompt, parseModelResponse } from "../oracle";
 import type {
   FetchImpl,
   OracleProvider,
   OracleProviderConfig,
   ProviderAnswer,
+  TarotAskInput,
 } from "../types";
+import { tarotPrompt } from "../tarot/prompt";
+import { parseSpreadResponse } from "../tarot/validate";
 
 interface ChatCompletionsPayload {
   choices?: Array<{
@@ -88,13 +90,14 @@ export function createOpenAIChatProvider(
 ): OracleProvider {
   const { apiKey, model, maxOutputTokens, temperature, timeoutMs } = config;
 
-  async function ask(question: string): Promise<ProviderAnswer> {
+  async function askTarot(input: TarotAskInput): Promise<ProviderAnswer> {
+    const { question, drawnCards } = input;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
       console.log(
-        `${kind}_request_started model=${model} question_length=${question.length}`,
+        `${kind}_request_started model=${model} question_length=${question.length} cards=${drawnCards.map((c) => c.id).join(",")}`,
       );
 
       const apiResponse = await fetchImpl(url, {
@@ -105,7 +108,7 @@ export function createOpenAIChatProvider(
         },
         body: JSON.stringify({
           model,
-          messages: [{ role: "user", content: oraclePrompt(question) }],
+          messages: [{ role: "user", content: tarotPrompt(question, drawnCards) }],
           temperature,
           max_tokens: maxOutputTokens,
           response_format: { type: "json_object" },
@@ -134,7 +137,9 @@ export function createOpenAIChatProvider(
 
       const content = payload.choices?.[0]?.message?.content;
       const result =
-        typeof content === "string" ? parseModelResponse(content) : null;
+        typeof content === "string"
+          ? parseSpreadResponse(content, drawnCards)
+          : null;
 
       if (!result) {
         console.error(`${kind}_response_invalid`);
@@ -151,5 +156,5 @@ export function createOpenAIChatProvider(
     }
   }
 
-  return { name: kind, ask };
+  return { name: kind, askTarot };
 }

@@ -3,23 +3,36 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MAX_BODY_BYTES, RATE_LIMIT_WINDOW_SECONDS, handleAsk } from "./handler";
 import { MAX_QUESTION_LENGTH } from "./oracle";
-import type { OracleDeps, OracleProvider, ProviderAnswer } from "./types";
+import type {
+  OracleDeps,
+  OracleProvider,
+  ProviderAnswer,
+  TarotResponse,
+} from "./types";
 
-const PROPHECY = {
-  verdict: "ДА",
-  confidence: 87,
-  prophecy: "Путь тернист, но цель близка.",
-  reason: "Звёзды благоволят смелым.",
+const SPREAD: TarotResponse = {
+  cards: [
+    { id: "the-fool", name: "Шут", position: "past", meaning: "Начало позади." },
+    { id: "the-magician", name: "Маг", position: "present", meaning: "Сила в руках." },
+    {
+      id: "the-high-priestess",
+      name: "Верховная Жрица",
+      position: "future",
+      meaning: "Тайна рядом.",
+    },
+  ],
+  summary: "Итог расклада.",
 };
 
 function stubProvider(answer: ProviderAnswer): OracleProvider {
-  return { name: "stub", ask: async () => answer };
+  return { name: "stub", askTarot: async () => answer };
 }
 
 function makeDeps(overrides: Partial<OracleDeps> = {}): OracleDeps {
   return {
-    provider: stubProvider({ ok: true, response: PROPHECY }),
+    provider: stubProvider({ ok: true, response: SPREAD }),
     corsAllowedOrigins: "http://localhost:3000",
+    randomFn: () => 0,
     ...overrides,
   };
 }
@@ -156,16 +169,21 @@ describe("handleAsk", () => {
     expect(await res.json()).toEqual({ error: "oracle_unavailable" });
   });
 
-  it("успех: спрашивает провайдера триммированным вопросом", async () => {
-    const ask = vi.fn(async () => ({ ok: true, response: PROPHECY }) as const);
+  it("успех: спрашивает провайдера триммированным вопросом и картами", async () => {
+    const askTarot = vi.fn<
+      (input: import("./types").TarotAskInput) => Promise<ProviderAnswer>
+    >(async () => ({ ok: true, response: SPREAD }));
     const res = await handleAsk(
       postRequest({ question: "  Учить ли Rust?  " }),
-      makeDeps({ provider: { name: "stub", ask } }),
+      makeDeps({ provider: { name: "stub", askTarot } }),
     );
 
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual(PROPHECY);
-    expect(ask).toHaveBeenCalledWith("Учить ли Rust?");
+    expect(await res.json()).toEqual(SPREAD);
+    expect(askTarot).toHaveBeenCalledOnce();
+    const seenInput = askTarot.mock.calls[0]?.[0];
+    expect(seenInput).toMatchObject({ question: "Учить ли Rust?" });
+    expect(seenInput?.drawnCards).toHaveLength(3);
   });
 
   it("пустой ответ провайдера возвращает 502", async () => {

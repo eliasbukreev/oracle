@@ -1,19 +1,35 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { OracleProvider, ProviderAnswer } from "../types";
+import type { OracleProvider, ProviderAnswer, TarotAskInput } from "../types";
 import { createFallbackProvider } from "./fallback";
 
 const ANSWER: ProviderAnswer = {
   ok: true,
   response: {
-    verdict: "ДА",
-    confidence: 87,
-    prophecy: "Путь тернист, но цель близка.",
-    reason: "Звёзды благоволят смелым.",
+    cards: [
+      { id: "the-fool", name: "Шут", position: "past", meaning: "Начало." },
+      { id: "the-magician", name: "Маг", position: "present", meaning: "Сила." },
+      {
+        id: "the-high-priestess",
+        name: "Верховная Жрица",
+        position: "future",
+        meaning: "Тайна.",
+      },
+    ],
+    summary: "Итог.",
   },
 };
 
+const INPUT: TarotAskInput = {
+  question: "Учить ли Rust?",
+  drawnCards: [
+    { id: "the-fool", name: "Шут", position: "past" },
+    { id: "the-magician", name: "Маг", position: "present" },
+    { id: "the-high-priestess", name: "Верховная Жрица", position: "future" },
+  ],
+};
+
 function stubProvider(answer: ProviderAnswer, name = "stub"): OracleProvider {
-  return { name, ask: async () => answer };
+  return { name, askTarot: async () => answer };
 }
 
 beforeEach(() => {
@@ -29,34 +45,34 @@ describe("FallbackProvider", () => {
     const secondaryAsk = vi.fn(async () => ANSWER);
     const provider = createFallbackProvider(stubProvider(ANSWER, "primary"), {
       name: "secondary",
-      ask: secondaryAsk,
+      askTarot: secondaryAsk,
     });
 
     expect(provider.name).toBe("fallback(primary+secondary)");
-    await expect(provider.ask("Учить ли Rust?")).resolves.toEqual(ANSWER);
+    await expect(provider.askTarot(INPUT)).resolves.toEqual(ANSWER);
     expect(secondaryAsk).not.toHaveBeenCalled();
   });
 
-  it("при пустом ответе primary спрашивает secondary тем же вопросом", async () => {
+  it("при пустом ответе primary спрашивает secondary тем же входом", async () => {
     const secondaryAsk = vi.fn(async () => ANSWER);
     const provider = createFallbackProvider(
       stubProvider({ ok: false, blocked: false }, "primary"),
-      { name: "secondary", ask: secondaryAsk },
+      { name: "secondary", askTarot: secondaryAsk },
     );
 
-    await expect(provider.ask("Учить ли Rust?")).resolves.toEqual(ANSWER);
-    expect(secondaryAsk).toHaveBeenCalledWith("Учить ли Rust?");
+    await expect(provider.askTarot(INPUT)).resolves.toEqual(ANSWER);
+    expect(secondaryAsk).toHaveBeenCalledWith(INPUT);
   });
 
   it("при запрете primary пробует secondary", async () => {
     const secondaryAsk = vi.fn(async () => ANSWER);
     const provider = createFallbackProvider(
       stubProvider({ ok: false, blocked: true }, "primary"),
-      { name: "secondary", ask: secondaryAsk },
+      { name: "secondary", askTarot: secondaryAsk },
     );
 
-    await expect(provider.ask("Учить ли Rust?")).resolves.toEqual(ANSWER);
-    expect(secondaryAsk).toHaveBeenCalledWith("Учить ли Rust?");
+    await expect(provider.askTarot(INPUT)).resolves.toEqual(ANSWER);
+    expect(secondaryAsk).toHaveBeenCalledWith(INPUT);
   });
 
   it("пробрасывает запрет когда пусты оба провайдера", async () => {
@@ -64,7 +80,7 @@ describe("FallbackProvider", () => {
       stubProvider({ ok: false, blocked: true }, "primary"),
       stubProvider({ ok: false, blocked: true }, "secondary"),
     );
-    await expect(provider.ask("Учить ли Rust?")).resolves.toEqual({
+    await expect(provider.askTarot(INPUT)).resolves.toEqual({
       ok: false,
       blocked: true,
     });
@@ -75,7 +91,7 @@ describe("FallbackProvider", () => {
       stubProvider({ ok: false, blocked: false }, "primary"),
       stubProvider({ ok: false, blocked: false }, "secondary"),
     );
-    await expect(provider.ask("Учить ли Rust?")).resolves.toEqual({
+    await expect(provider.askTarot(INPUT)).resolves.toEqual({
       ok: false,
       blocked: false,
     });

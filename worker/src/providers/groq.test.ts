@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import type { FetchImpl } from "../types";
-import { fakeFetch, strictFetch, validConfig, VALID_ORACLE_JSON } from "./fixtures";
+import {
+  DRAWN_CARDS,
+  VALID_TAROT_JSON,
+  fakeFetch,
+  strictFetch,
+  validConfig,
+  validTarotInput,
+} from "./fixtures";
 import { createGroqProvider } from "./groq";
 
 function groqOk(content: string | null): Response {
@@ -9,7 +16,7 @@ function groqOk(content: string | null): Response {
 }
 
 describe("GroqProvider", () => {
-  it("возвращает пророчество и шлёт корректный запрос", async () => {
+  it("возвращает расклад и шлёт корректный запрос", async () => {
     let seenUrl = "";
     let seenHeaders: Headers | undefined;
     let seenBody = "";
@@ -17,16 +24,38 @@ describe("GroqProvider", () => {
       seenUrl = url;
       seenHeaders = new Headers(init?.headers);
       seenBody = String(init?.body);
-      return groqOk(VALID_ORACLE_JSON);
+      return groqOk(VALID_TAROT_JSON);
     });
 
-    const result = await createGroqProvider(validConfig(), fetchImpl).ask(
-      "Учить ли Rust?",
+    const result = await createGroqProvider(validConfig(), fetchImpl).askTarot(
+      validTarotInput(),
     );
 
     expect(result).toEqual({
       ok: true,
-      response: JSON.parse(VALID_ORACLE_JSON),
+      response: {
+        cards: [
+          {
+            id: "the-fool",
+            name: "Шут",
+            position: "past",
+            meaning: "Новое начало уже позади.",
+          },
+          {
+            id: "the-magician",
+            name: "Маг",
+            position: "present",
+            meaning: "Всё в твоих руках.",
+          },
+          {
+            id: "the-high-priestess",
+            name: "Верховная Жрица",
+            position: "future",
+            meaning: "Тайна раскроется скоро.",
+          },
+        ],
+        summary: "Прошлое отпустило, настоящее в твоей власти.",
+      },
     });
     expect(seenUrl).toBe("https://api.groq.com/openai/v1/chat/completions");
     expect(seenHeaders?.get("Authorization")).toBe("Bearer test-key");
@@ -37,9 +66,11 @@ describe("GroqProvider", () => {
       max_tokens: 800,
       response_format: { type: "json_object" },
     });
-    expect(JSON.parse(seenBody).messages[0].content).toContain(
-      "Учить ли Rust?",
-    );
+    const content = JSON.parse(seenBody).messages[0].content as string;
+    expect(content).toContain("Учить ли Rust?");
+    for (const card of DRAWN_CARDS) {
+      expect(content).toContain(card.id);
+    }
   });
 
   it("возвращает null при HTTP-ошибке", async () => {
@@ -52,7 +83,7 @@ describe("GroqProvider", () => {
           }),
       ),
     );
-    expect(await provider.ask("Учить ли Rust?")).toEqual({
+    expect(await provider.askTarot(validTarotInput())).toEqual({
       ok: false,
       blocked: false,
     });
@@ -61,9 +92,9 @@ describe("GroqProvider", () => {
   it("возвращает null при битом ответе модели", async () => {
     const provider = createGroqProvider(
       validConfig(),
-      fakeFetch(() => groqOk('{"verdict":"ДА"}')),
+      fakeFetch(() => groqOk('{"cards":[]}')),
     );
-    expect(await provider.ask("Учить ли Rust?")).toEqual({
+    expect(await provider.askTarot(validTarotInput())).toEqual({
       ok: false,
       blocked: false,
     });
@@ -74,7 +105,7 @@ describe("GroqProvider", () => {
       validConfig(),
       fakeFetch(() => groqOk(null)),
     );
-    expect(await provider.ask("Учить ли Rust?")).toEqual({
+    expect(await provider.askTarot(validTarotInput())).toEqual({
       ok: false,
       blocked: false,
     });
@@ -85,7 +116,7 @@ describe("GroqProvider", () => {
       throw new TypeError("network down");
     }) as unknown as FetchImpl;
     const provider = createGroqProvider(validConfig(), fetchImpl);
-    expect(await provider.ask("Учить ли Rust?")).toEqual({
+    expect(await provider.askTarot(validTarotInput())).toEqual({
       ok: false,
       blocked: false,
     });
@@ -96,7 +127,7 @@ describe("GroqProvider", () => {
       validConfig(),
       fakeFetch(() => new Response("forbidden", { status: 403 })),
     );
-    expect(await provider.ask("Учить ли Rust?")).toEqual({
+    expect(await provider.askTarot(validTarotInput())).toEqual({
       ok: false,
       blocked: true,
     });
@@ -105,11 +136,11 @@ describe("GroqProvider", () => {
   it("вызывает fetch без receiver (строгость workerd)", async () => {
     const provider = createGroqProvider(
       validConfig(),
-      strictFetch(() => groqOk(VALID_ORACLE_JSON)),
+      strictFetch(() => groqOk(VALID_TAROT_JSON)),
     );
-    expect(await provider.ask("Учить ли Rust?")).toEqual({
+    expect(await provider.askTarot(validTarotInput())).toEqual({
       ok: true,
-      response: JSON.parse(VALID_ORACLE_JSON),
+      response: expect.objectContaining({ summary: expect.any(String) }),
     });
   });
 });

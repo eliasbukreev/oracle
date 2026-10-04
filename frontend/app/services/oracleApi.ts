@@ -1,4 +1,4 @@
-import type { OracleErrorCode, OracleResponse } from "~/types/oracle";
+import type { OracleErrorCode, TarotCard, TarotResponse } from "~/types/oracle";
 
 const ASK_TIMEOUT_MS = 40000;
 
@@ -44,7 +44,29 @@ function parseRetryAfter(
   return undefined;
 }
 
-function isOracleResponse(value: unknown): value is OracleResponse {
+function isTarotPosition(value: unknown): value is TarotCard["position"] {
+  return value === "past" || value === "present" || value === "future";
+}
+
+function isTarotCard(value: unknown): value is TarotCard {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const card = value as Record<string, unknown>;
+
+  return (
+    typeof card.id === "string" &&
+    card.id.length > 0 &&
+    typeof card.name === "string" &&
+    card.name.length > 0 &&
+    isTarotPosition(card.position) &&
+    typeof card.meaning === "string" &&
+    card.meaning.length > 0
+  );
+}
+
+function isTarotResponse(value: unknown): value is TarotResponse {
   if (!value || typeof value !== "object") {
     return false;
   }
@@ -52,15 +74,11 @@ function isOracleResponse(value: unknown): value is OracleResponse {
   const response = value as Record<string, unknown>;
 
   return (
-    typeof response.verdict === "string" &&
-    response.verdict.length > 0 &&
-    typeof response.confidence === "number" &&
-    response.confidence >= 0 &&
-    response.confidence <= 100 &&
-    typeof response.prophecy === "string" &&
-    response.prophecy.length > 0 &&
-    typeof response.reason === "string" &&
-    response.reason.length > 0
+    Array.isArray(response.cards) &&
+    response.cards.length === 3 &&
+    response.cards.every(isTarotCard) &&
+    typeof response.summary === "string" &&
+    response.summary.length > 0
   );
 }
 
@@ -88,7 +106,7 @@ export async function askOracle(
   question: string,
   apiUrl: string,
   timeoutMs: number = ASK_TIMEOUT_MS,
-): Promise<OracleResponse> {
+): Promise<TarotResponse> {
   if (!apiUrl) {
     throw new OracleRequestError("internal_error");
   }
@@ -135,7 +153,7 @@ export async function askOracle(
     throw new OracleRequestError(code, retryAfter);
   }
 
-  if (!isOracleResponse(payload)) {
+  if (!isTarotResponse(payload)) {
     throw new OracleRequestError("oracle_unavailable");
   }
 

@@ -4,10 +4,17 @@ import { OracleRequestError, askOracle } from "./oracleApi";
 const API_URL = "https://oracle.test/";
 
 const VALID_PAYLOAD = {
-  verdict: "ДА",
-  confidence: 87,
-  prophecy: "Путь тернист, но цель близка.",
-  reason: "Звёзды благоволят смелым.",
+  cards: [
+    { id: "the-fool", name: "Шут", position: "past", meaning: "Начало позади." },
+    { id: "the-magician", name: "Маг", position: "present", meaning: "Сила в руках." },
+    {
+      id: "the-high-priestess",
+      name: "Верховная Жрица",
+      position: "future",
+      meaning: "Тайна рядом.",
+    },
+  ],
+  summary: "Итог расклада.",
 };
 
 function mockFetchOnce(
@@ -66,7 +73,7 @@ describe("askOracle", () => {
   });
 
   it("бросает oracle_unavailable при плохом теле 200", async () => {
-    mockFetchOnce({ verdict: "ДА" });
+    mockFetchOnce({ cards: [] });
     const error = (await captureError()) as OracleRequestError;
     expect(error).toBeInstanceOf(OracleRequestError);
     expect(error.code).toBe("oracle_unavailable");

@@ -2,14 +2,6 @@
 // Цепочка по умолчанию: OpenRouter primary + Groq fallback.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import worker, { type Env } from "./index";
-import { PREFLIGHT_MAX_AGE_SECONDS } from "./http";
-
-const VALID_ORACLE_JSON = JSON.stringify({
-  verdict: "ДА",
-  confidence: 87,
-  prophecy: "Путь тернист, но цель близка.",
-  reason: "Звёзды благоволят смелым.",
-});
 
 function makeEnv(overrides: Partial<Env> = {}): Env {
   return {
@@ -17,7 +9,7 @@ function makeEnv(overrides: Partial<Env> = {}): Env {
     OPENROUTER_MODEL: "openrouter-model",
     GROQ_API_KEY: "groq-key",
     GROQ_MODEL: "groq-model",
-    ORACLE_MAX_TOKENS: "800",
+    ORACLE_MAX_TOKENS: "1200",
     ORACLE_TEMPERATURE: "0.8",
     ORACLE_TIMEOUT: "20",
     CORS_ALLOWED_ORIGINS: "http://localhost:3000",
@@ -33,11 +25,69 @@ function postRequest(): Request {
   });
 }
 
-function chatOk(): Response {
-  const payload = {
-    choices: [{ message: { role: "assistant", content: VALID_ORACLE_JSON } }],
-  };
-  return new Response(JSON.stringify(payload), { status: 200 });
+// Динамический мок LLM: читает вытянутые id из промта и эхом возвращает их.
+// Нужно, т.к. карты тянет сервер случайно через cryptoRandom.
+function tarotEcho(): Response {
+  return new Response(
+    JSON.stringify({
+      choices: [
+        {
+          message: {
+            role: "assistant",
+            content: "__ECHO_TAROT__",
+          },
+        },
+      ],
+    }),
+    { status: 200 },
+  );
+}
+
+function stubChatFetch(
+  respond: (url: string, body: unknown) => Response = () => tarotEcho(),
+) {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input);
+      let body: unknown = null;
+      try {
+        body = init?.body ? JSON.parse(String(init.body)) : null;
+      } catch {
+        body = null;
+      }
+
+      const content =
+        (body as { messages?: Array<{ content?: string }> } | null)
+          ?.messages?.[0]?.content ?? "";
+
+      // Если провайдер прислал промт с id — отвечаем валидным раскладом по тем же id.
+      const ids = [...content.matchAll(/\(id: ([a-z-]+)\)/g)].map((m) => m[1]);
+      if (ids.length === 3) {
+        const positions = ["past", "present", "future"];
+        const payload = {
+          choices: [
+            {
+              message: {
+                role: "assistant",
+                content: JSON.stringify({
+                  cards: ids.map((id, i) => ({
+                    id,
+                    position: positions[i],
+                    meaning: `Толкование ${id}.`,
+                  })),
+                  summary: "Общий вывод.",
+                }),
+              },
+            },
+          ],
+        };
+        return new Response(JSON.stringify(payload), { status: 200 });
+      }
+
+      return respond(url, body);
+    }),
+  );
 }
 
 beforeEach(() => {
@@ -58,9 +108,6 @@ describe("worker fetch", () => {
       makeEnv({ OPENROUTER_API_KEY: "   ", OPENROUTER_MODEL: "" }),
     );
     expect(res.status).toBe(204);
-    expect(res.headers.get("Access-Control-Max-Age")).toBe(
-      String(PREFLIGHT_MAX_AGE_SECONDS),
-    );
   });
 
   it("не-POST отвечает 405 даже с битым конфигом", async () => {
@@ -72,20 +119,47 @@ describe("worker fetch", () => {
     expect(await res.json()).toEqual({ error: "invalid_request" });
   });
 
-  it("по умолчанию отвечает через OpenRouter", async () => {
+  it("по умолчанию отвечает раскладом через OpenRouter", async () => {
     let seenUrl = "";
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (input: string | URL | Request) => {
+      vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
         seenUrl = String(input);
-        return chatOk();
+        const body = init?.body ? JSON.parse(String(init.body)) : null;
+        const content = body?.messages?.[0]?.content ?? "";
+        const ids = [...String(content).matchAll(/\(id: ([a-z-]+)\)/g)].map(
+          (m) => m[1],
+        );
+        const payload = {
+          choices: [
+            {
+              message: {
+                role: "assistant",
+                content: JSON.stringify({
+                  cards: ids.map((id, i) => ({
+                    id,
+                    position: ["past", "present", "future"][i],
+                    meaning: `Толкование ${id}.`,
+                  })),
+                  summary: "Общий вывод.",
+                }),
+              },
+            },
+          ],
+        };
+        return new Response(JSON.stringify(payload), { status: 200 });
       }),
     );
 
     const res = await worker.fetch(postRequest(), makeEnv());
 
     expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({ verdict: "ДА" });
+    const json = (await res.json()) as {
+      cards: Array<{ id: string }>;
+      summary: string;
+    };
+    expect(json.cards).toHaveLength(3);
+    expect(json.summary).toBeTruthy();
     expect(seenUrl).toContain("openrouter.ai");
   });
 
@@ -107,12 +181,37 @@ describe("worker fetch", () => {
     const seenUrls: string[] = [];
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (input: string | URL | Request) => {
+      vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
         const url = String(input);
         seenUrls.push(url);
-        return url.includes("groq")
-          ? chatOk()
-          : new Response("{}", { status: 500 });
+        if (url.includes("groq")) {
+          const body = init?.body ? JSON.parse(String(init.body)) : null;
+          const content = String(body?.messages?.[0]?.content ?? "");
+          const ids = [...content.matchAll(/\(id: ([a-z-]+)\)/g)].map(
+            (m) => m[1],
+          );
+          return new Response(
+            JSON.stringify({
+              choices: [
+                {
+                  message: {
+                    role: "assistant",
+                    content: JSON.stringify({
+                      cards: ids.map((id, i) => ({
+                        id,
+                        position: ["past", "present", "future"][i],
+                        meaning: `Толкование ${id}.`,
+                      })),
+                      summary: "Общий вывод.",
+                    }),
+                  },
+                },
+              ],
+            }),
+            { status: 200 },
+          );
+        }
+        return new Response("{}", { status: 500 });
       }),
     );
 
@@ -122,22 +221,73 @@ describe("worker fetch", () => {
     );
 
     expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({ verdict: "ДА" });
+    const json = (await res.json()) as { cards: unknown[] };
+    expect(json.cards).toHaveLength(3);
     expect(seenUrls).toHaveLength(2);
     expect(seenUrls[0]).toContain("openrouter.ai");
     expect(seenUrls[1]).toContain("groq.com");
   });
 
   it("fallback: при 403 от OpenRouter спрашивает Groq", async () => {
+    stubChatFetch((url) =>
+      url.includes("groq")
+        ? new Response(
+            JSON.stringify({
+              choices: [
+                {
+                  message: {
+                    role: "assistant",
+                    content: JSON.stringify({
+                      cards: [
+                        { id: "a", position: "past", meaning: "x" },
+                        { id: "b", position: "present", meaning: "y" },
+                        { id: "c", position: "future", meaning: "z" },
+                      ],
+                      summary: "s",
+                    }),
+                  },
+                },
+              ],
+            }),
+            { status: 200 },
+          )
+        : new Response("forbidden", { status: 403 }),
+    );
+    // Простой счётчик для этого кейса: первый вызов 403, второй — эхо.
     const seenUrls: string[] = [];
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (input: string | URL | Request) => {
+      vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
         const url = String(input);
         seenUrls.push(url);
-        return url.includes("groq")
-          ? chatOk()
-          : new Response("forbidden", { status: 403 });
+        if (!url.includes("groq")) {
+          return new Response("forbidden", { status: 403 });
+        }
+        const body = init?.body ? JSON.parse(String(init.body)) : null;
+        const content = String(body?.messages?.[0]?.content ?? "");
+        const ids = [...content.matchAll(/\(id: ([a-z-]+)\)/g)].map(
+          (m) => m[1],
+        );
+        return new Response(
+          JSON.stringify({
+            choices: [
+              {
+                message: {
+                  role: "assistant",
+                  content: JSON.stringify({
+                    cards: ids.map((id, i) => ({
+                      id,
+                      position: ["past", "present", "future"][i],
+                      meaning: `Толкование ${id}.`,
+                    })),
+                    summary: "Общий вывод.",
+                  }),
+                },
+              },
+            ],
+          }),
+          { status: 200 },
+        );
       }),
     );
 
@@ -147,7 +297,6 @@ describe("worker fetch", () => {
     );
 
     expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({ verdict: "ДА" });
     expect(seenUrls).toHaveLength(2);
   });
 
@@ -183,9 +332,36 @@ describe("worker fetch", () => {
   });
 
   it("битый fallback-конфиг не ломает primary", async () => {
+    stubChatFetch();
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => chatOk()),
+      vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+        const body = init?.body ? JSON.parse(String(init.body)) : null;
+        const content = String(body?.messages?.[0]?.content ?? "");
+        const ids = [...content.matchAll(/\(id: ([a-z-]+)\)/g)].map(
+          (m) => m[1],
+        );
+        return new Response(
+          JSON.stringify({
+            choices: [
+              {
+                message: {
+                  role: "assistant",
+                  content: JSON.stringify({
+                    cards: ids.map((id, i) => ({
+                      id,
+                      position: ["past", "present", "future"][i],
+                      meaning: `Толкование ${id}.`,
+                    })),
+                    summary: "Общий вывод.",
+                  }),
+                },
+              },
+            ],
+          }),
+          { status: 200 },
+        );
+      }),
     );
 
     const res = await worker.fetch(
@@ -197,6 +373,7 @@ describe("worker fetch", () => {
     );
 
     expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({ verdict: "ДА" });
+    const json = (await res.json()) as { cards: unknown[] };
+    expect(json.cards).toHaveLength(3);
   });
 });

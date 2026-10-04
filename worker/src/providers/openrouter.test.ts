@@ -1,6 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { FetchImpl } from "../types";
-import { fakeFetch, strictFetch, validConfig, VALID_ORACLE_JSON } from "./fixtures";
+import {
+  DRAWN_CARDS,
+  VALID_TAROT_JSON,
+  fakeFetch,
+  strictFetch,
+  validConfig,
+  validTarotInput,
+} from "./fixtures";
 import { createOpenRouterProvider } from "./openrouter";
 
 afterEach(() => {
@@ -13,7 +20,7 @@ function openRouterOk(content: string | null): Response {
 }
 
 describe("OpenRouterProvider", () => {
-  it("возвращает пророчество и шлёт корректный запрос", async () => {
+  it("возвращает расклад и шлёт корректный запрос", async () => {
     let seenUrl = "";
     let seenHeaders: Headers | undefined;
     let seenBody = "";
@@ -21,16 +28,39 @@ describe("OpenRouterProvider", () => {
       seenUrl = url;
       seenHeaders = new Headers(init?.headers);
       seenBody = String(init?.body);
-      return openRouterOk(VALID_ORACLE_JSON);
+      return openRouterOk(VALID_TAROT_JSON);
     });
 
-    const result = await createOpenRouterProvider(validConfig(), fetchImpl).ask(
-      "Учить ли Rust?",
-    );
+    const result = await createOpenRouterProvider(
+      validConfig(),
+      fetchImpl,
+    ).askTarot(validTarotInput());
 
     expect(result).toEqual({
       ok: true,
-      response: JSON.parse(VALID_ORACLE_JSON),
+      response: {
+        cards: [
+          {
+            id: "the-fool",
+            name: "Шут",
+            position: "past",
+            meaning: "Новое начало уже позади.",
+          },
+          {
+            id: "the-magician",
+            name: "Маг",
+            position: "present",
+            meaning: "Всё в твоих руках.",
+          },
+          {
+            id: "the-high-priestess",
+            name: "Верховная Жрица",
+            position: "future",
+            meaning: "Тайна раскроется скоро.",
+          },
+        ],
+        summary: "Прошлое отпустило, настоящее в твоей власти.",
+      },
     });
     expect(seenUrl).toBe("https://openrouter.ai/api/v1/chat/completions");
     expect(seenHeaders?.get("Authorization")).toBe("Bearer test-key");
@@ -41,9 +71,11 @@ describe("OpenRouterProvider", () => {
       max_tokens: 800,
       response_format: { type: "json_object" },
     });
-    expect(JSON.parse(seenBody).messages[0].content).toContain(
-      "Учить ли Rust?",
-    );
+    const content = JSON.parse(seenBody).messages[0].content as string;
+    expect(content).toContain("Учить ли Rust?");
+    for (const card of DRAWN_CARDS) {
+      expect(content).toContain(card.id);
+    }
   });
 
   it("возвращает null при HTTP-ошибке", async () => {
@@ -56,7 +88,7 @@ describe("OpenRouterProvider", () => {
           }),
       ),
     );
-    expect(await provider.ask("Учить ли Rust?")).toEqual({
+    expect(await provider.askTarot(validTarotInput())).toEqual({
       ok: false,
       blocked: false,
     });
@@ -81,7 +113,7 @@ describe("OpenRouterProvider", () => {
       ),
     );
 
-    expect(await provider.ask("Учить ли Rust?")).toEqual({
+    expect(await provider.askTarot(validTarotInput())).toEqual({
       ok: false,
       blocked: true,
     });
@@ -102,7 +134,7 @@ describe("OpenRouterProvider", () => {
       ),
     );
 
-    expect(await provider.ask("Учить ли Rust?")).toEqual({
+    expect(await provider.askTarot(validTarotInput())).toEqual({
       ok: false,
       blocked: true,
     });
@@ -120,7 +152,7 @@ describe("OpenRouterProvider", () => {
       ),
     );
 
-    expect(await provider.ask("Учить ли Rust?")).toEqual({
+    expect(await provider.askTarot(validTarotInput())).toEqual({
       ok: false,
       blocked: true,
     });
@@ -136,7 +168,7 @@ describe("OpenRouterProvider", () => {
       fakeFetch(() => new Response("", { status: 403 })),
     );
 
-    expect(await provider.ask("Учить ли Rust?")).toEqual({
+    expect(await provider.askTarot(validTarotInput())).toEqual({
       ok: false,
       blocked: true,
     });
@@ -148,9 +180,28 @@ describe("OpenRouterProvider", () => {
   it("возвращает null при битом ответе модели", async () => {
     const provider = createOpenRouterProvider(
       validConfig(),
-      fakeFetch(() => openRouterOk('{"verdict":"ДА"}')),
+      fakeFetch(() => openRouterOk('{"cards":[]}')),
     );
-    expect(await provider.ask("Учить ли Rust?")).toEqual({
+    expect(await provider.askTarot(validTarotInput())).toEqual({
+      ok: false,
+      blocked: false,
+    });
+  });
+
+  it("возвращает null при подмене id моделью", async () => {
+    const bad = JSON.stringify({
+      cards: [
+        { id: "death", position: "past", meaning: "x" },
+        { id: "the-magician", position: "present", meaning: "y" },
+        { id: "the-high-priestess", position: "future", meaning: "z" },
+      ],
+      summary: "s",
+    });
+    const provider = createOpenRouterProvider(
+      validConfig(),
+      fakeFetch(() => openRouterOk(bad)),
+    );
+    expect(await provider.askTarot(validTarotInput())).toEqual({
       ok: false,
       blocked: false,
     });
@@ -161,7 +212,7 @@ describe("OpenRouterProvider", () => {
       validConfig(),
       fakeFetch(() => openRouterOk(null)),
     );
-    expect(await provider.ask("Учить ли Rust?")).toEqual({
+    expect(await provider.askTarot(validTarotInput())).toEqual({
       ok: false,
       blocked: false,
     });
@@ -172,7 +223,7 @@ describe("OpenRouterProvider", () => {
       throw new TypeError("network down");
     }) as unknown as FetchImpl;
     const provider = createOpenRouterProvider(validConfig(), fetchImpl);
-    expect(await provider.ask("Учить ли Rust?")).toEqual({
+    expect(await provider.askTarot(validTarotInput())).toEqual({
       ok: false,
       blocked: false,
     });
@@ -185,7 +236,7 @@ describe("OpenRouterProvider", () => {
       fakeFetch(() => new Response("", { status: 200 })),
     );
 
-    expect(await provider.ask("Учить ли Rust?")).toEqual({
+    expect(await provider.askTarot(validTarotInput())).toEqual({
       ok: false,
       blocked: false,
     });
@@ -202,7 +253,7 @@ describe("OpenRouterProvider", () => {
     }) as unknown as FetchImpl;
     const provider = createOpenRouterProvider(validConfig(), fetchImpl);
 
-    expect(await provider.ask("Учить ли Rust?")).toEqual({
+    expect(await provider.askTarot(validTarotInput())).toEqual({
       ok: false,
       blocked: false,
     });
@@ -216,7 +267,7 @@ describe("OpenRouterProvider", () => {
       validConfig(),
       fakeFetch(() => new Response("forbidden", { status: 403 })),
     );
-    expect(await provider.ask("Учить ли Rust?")).toEqual({
+    expect(await provider.askTarot(validTarotInput())).toEqual({
       ok: false,
       blocked: true,
     });
@@ -225,11 +276,11 @@ describe("OpenRouterProvider", () => {
   it("вызывает fetch без receiver (строгость workerd)", async () => {
     const provider = createOpenRouterProvider(
       validConfig(),
-      strictFetch(() => openRouterOk(VALID_ORACLE_JSON)),
+      strictFetch(() => openRouterOk(VALID_TAROT_JSON)),
     );
-    expect(await provider.ask("Учить ли Rust?")).toEqual({
+    expect(await provider.askTarot(validTarotInput())).toEqual({
       ok: true,
-      response: JSON.parse(VALID_ORACLE_JSON),
+      response: expect.objectContaining({ summary: expect.any(String) }),
     });
   });
 });

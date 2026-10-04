@@ -1,4 +1,4 @@
-import type { OracleError, OracleResponse } from "~/types/oracle";
+import type { OracleError, TarotResponse } from "~/types/oracle";
 import { OracleRequestError, askOracle } from "~/services/oracleApi";
 import {
   errorMessages,
@@ -8,7 +8,7 @@ import {
 
 export function useOracle() {
   const config = useRuntimeConfig();
-  const result = ref<OracleResponse | null>(null);
+  const result = ref<TarotResponse | null>(null);
   const error = ref<OracleError | null>(null);
   const isLoading = ref(false);
   const retryIn = ref(0);

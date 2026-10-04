@@ -1,13 +1,30 @@
 // Общие фикстуры для тестов провайдеров. Не *.test.ts,
 // поэтому vitest не запускает файл как сьют.
 import { createProviderConfig } from "../providers";
-import type { FetchImpl, OracleProviderConfig } from "../types";
+import type {
+  DrawnCard,
+  FetchImpl,
+  OracleProviderConfig,
+  TarotAskInput,
+} from "../types";
 
-export const VALID_ORACLE_JSON = JSON.stringify({
-  verdict: "ДА",
-  confidence: 87,
-  prophecy: "Путь тернист, но цель близка.",
-  reason: "Звёзды благоволят смелым.",
+export const DRAWN_CARDS: DrawnCard[] = [
+  { id: "the-fool", name: "Шут", position: "past" },
+  { id: "the-magician", name: "Маг", position: "present" },
+  { id: "the-high-priestess", name: "Верховная Жрица", position: "future" },
+];
+
+export const VALID_TAROT_JSON = JSON.stringify({
+  cards: [
+    { id: "the-fool", position: "past", meaning: "Новое начало уже позади." },
+    { id: "the-magician", position: "present", meaning: "Всё в твоих руках." },
+    {
+      id: "the-high-priestess",
+      position: "future",
+      meaning: "Тайна раскроется скоро.",
+    },
+  ],
+  summary: "Прошлое отпустило, настоящее в твоей власти.",
 });
 
 export const VALID_RAW = {
@@ -22,6 +39,16 @@ export function validConfig(): OracleProviderConfig {
   const config = createProviderConfig(VALID_RAW);
   if (!config) throw new Error("valid config expected");
   return config;
+}
+
+export function validTarotInput(
+  overrides: Partial<TarotAskInput> = {},
+): TarotAskInput {
+  return {
+    question: "Учить ли Rust?",
+    drawnCards: DRAWN_CARDS,
+    ...overrides,
+  };
 }
 
 export function fakeFetch(

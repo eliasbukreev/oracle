@@ -1,19 +1,19 @@
-import type { OracleProvider, ProviderAnswer } from "../types";
+import type { OracleProvider, ProviderAnswer, TarotAskInput } from "../types";
 
 export function createFallbackProvider(
   primary: OracleProvider,
   secondary: OracleProvider,
 ): OracleProvider {
-  async function ask(question: string): Promise<ProviderAnswer> {
-    const first = await primary.ask(question);
+  async function askTarot(input: TarotAskInput): Promise<ProviderAnswer> {
+    const first = await primary.askTarot(input);
 
     if (first.ok) {
       return first;
     }
 
     console.warn(`provider_fallback from=${primary.name} to=${secondary.name}`);
-    return secondary.ask(question);
+    return secondary.askTarot(input);
   }
 
-  return { name: `fallback(${primary.name}+${secondary.name})`, ask };
+  return { name: `fallback(${primary.name}+${secondary.name})`, askTarot };
 }

@@ -1,11 +1,34 @@
 // Платформенно-независимые контракты: домен и DI.
 // Модуль ничего не знает про Cloudflare, Request/Response и Env.
 
-export interface OracleResponse {
-  verdict: string;
-  confidence: number;
-  prophecy: string;
-  reason: string;
+/** Позиция карты в раскладе из трёх карт. */
+export type TarotPosition = "past" | "present" | "future";
+
+/** Карта, вытянутая сервером до обращения к LLM. Имя каноническое. */
+export interface DrawnCard {
+  id: string;
+  name: string;
+  position: TarotPosition;
+}
+
+/** Вход провайдера: вопрос + уже вытянутые карты. */
+export interface TarotAskInput {
+  question: string;
+  drawnCards: DrawnCard[];
+}
+
+/** Одна карта в ответе API: id для маппинга на изображения, name для текста. */
+export interface TarotCard {
+  id: string;
+  name: string;
+  position: TarotPosition;
+  meaning: string;
+}
+
+/** Расклад из трёх карт — ответ API. */
+export interface TarotResponse {
+  cards: TarotCard[];
+  summary: string;
 }
 
 /** Нормализованный конфиг LLM-провайдера. Парсится из строк окружения
@@ -24,11 +47,11 @@ export type FetchImpl = typeof fetch;
  *  конкретная реализация (OpenRouter, Groq, ...) подставляется снаружи. */
 export interface OracleProvider {
   readonly name: string;
-  ask(question: string): Promise<ProviderAnswer>;
+  askTarot(input: TarotAskInput): Promise<ProviderAnswer>;
 }
 
 export type ProviderAnswer =
-  { ok: true; response: OracleResponse } | { ok: false; blocked: boolean };
+  { ok: true; response: TarotResponse } | { ok: false; blocked: boolean };
 
 /** Минимальный контракт rate-лимитера. Реальный Cloudflare RateLimit
  *  биндинг удовлетворяет ему структурно, в тестах подсовывается фейк. */
@@ -43,4 +66,6 @@ export interface OracleDeps {
   perIpLimiter?: RateLimiter;
   globalLimiter?: RateLimiter;
   corsAllowedOrigins: string;
+  /** Генератор случайных чисел для вытягивания карт. По умолчанию crypto-based. */
+  randomFn?: () => number;
 }

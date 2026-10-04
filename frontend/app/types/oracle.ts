@@ -1,8 +1,24 @@
-export type OracleResponse = {
-  verdict: string
-  confidence: number
-  prophecy: string
-  reason: string
+export type TarotPosition = 'past' | 'present' | 'future'
+
+export type TarotCard = {
+  id: string
+  name: string
+  position: TarotPosition
+  meaning: string
+}
+
+export type TarotResponse = {
+  cards: TarotCard[]
+  summary: string
+}
+
+/** Исторический алиас: раньше ответом было одиночное пророчество. */
+export type OracleResponse = TarotResponse
+
+export const TAROT_POSITION_LABELS_RU: Record<TarotPosition, string> = {
+  past: 'Прошлое',
+  present: 'Настоящее',
+  future: 'Будущее',
 }
 
 export type OracleErrorCode =

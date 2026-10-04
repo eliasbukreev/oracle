@@ -58,13 +58,13 @@ describe("createProvider", () => {
   it("создаёт OpenRouterProvider", () => {
     const provider = createProvider(PROVIDER_OPENROUTER, validConfig());
     expect(provider.name).toBe("openrouter");
-    expect(typeof provider.ask).toBe("function");
+    expect(typeof provider.askTarot).toBe("function");
   });
 
   it("создаёт GroqProvider", () => {
     const provider = createProvider(PROVIDER_GROQ, validConfig());
     expect(provider.name).toBe("groq");
-    expect(typeof provider.ask).toBe("function");
+    expect(typeof provider.askTarot).toBe("function");
   });
 
   it("бросает на неизвестном провайдере", () => {
