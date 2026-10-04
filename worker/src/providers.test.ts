@@ -3,6 +3,7 @@ import {
   DEFAULT_PROVIDER,
   PROVIDER_GROQ,
   PROVIDER_OPENROUTER,
+  PROVIDER_ORCA,
   createProvider,
   createProviderConfig,
 } from "./providers";
@@ -77,6 +78,12 @@ describe("createProvider", () => {
   it("создаёт GroqProvider", () => {
     const provider = createProvider(PROVIDER_GROQ, validConfig());
     expect(provider.name).toBe("groq");
+    expect(typeof provider.askTarot).toBe("function");
+  });
+
+  it("создаёт OrcaProvider", () => {
+    const provider = createProvider(PROVIDER_ORCA, validConfig());
+    expect(provider.name).toBe("orca");
     expect(typeof provider.askTarot).toBe("function");
   });
 

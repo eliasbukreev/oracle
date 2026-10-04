@@ -61,6 +61,8 @@ jobs:
           OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           GROQ_MODEL: ${{ vars.GROQ_MODEL }}
+          ORCA_API_KEY: ${{ secrets.ORCA_API_KEY }}
+          ORCA_MODEL: ${{ vars.ORCA_MODEL }}
           ORACLE_PROVIDER: ${{ vars.ORACLE_PROVIDER }}
           ORACLE_FALLBACK_PROVIDER: ${{ vars.ORACLE_FALLBACK_PROVIDER }}
           ORACLE_MAX_TOKENS: ${{ vars.ORACLE_MAX_TOKENS }}
@@ -69,11 +71,16 @@ jobs:
           CORS_ALLOWED_ORIGINS: ${{ vars.CORS_ALLOWED_ORIGINS }}
           TAROT_IMAGE_BASE_URL: ${{ vars.TAROT_IMAGE_BASE_URL }}
         run: |
-          printf '%s' "$OPENROUTER_API_KEY" | npx wrangler secret put OPENROUTER_API_KEY
-          printf '%s' "$GROQ_API_KEY" | npx wrangler secret put GROQ_API_KEY
+          # Секреты провайдеров опциональны: незаданный не должен ронять деплой.
+          for name in OPENROUTER_API_KEY GROQ_API_KEY ORCA_API_KEY; do
+            if [ -n "${!name}" ]; then
+              printf '%s' "${!name}" | npx wrangler secret put "$name"
+            fi
+          done
           npx wrangler deploy \
             --var "OPENROUTER_MODEL:${OPENROUTER_MODEL}" \
             --var "GROQ_MODEL:${GROQ_MODEL}" \
+            --var "ORCA_MODEL:${ORCA_MODEL}" \
             --var "ORACLE_PROVIDER:${ORACLE_PROVIDER}" \
             --var "ORACLE_FALLBACK_PROVIDER:${ORACLE_FALLBACK_PROVIDER}" \
             --var "ORACLE_MAX_TOKENS:${ORACLE_MAX_TOKENS}" \

@@ -4,6 +4,7 @@ import {
   DEFAULT_PROVIDER,
   PROVIDER_GROQ,
   PROVIDER_OPENROUTER,
+  PROVIDER_ORCA,
   createProvider,
   createProviderConfig,
 } from "./providers";
@@ -15,6 +16,9 @@ export interface Env {
   OPENROUTER_MODEL: string;
   GROQ_API_KEY: string;
   GROQ_MODEL: string;
+  /** Ключ orcarouter.ai. Пусто = провайдер не собирается. */
+  ORCA_API_KEY: string;
+  ORCA_MODEL: string;
   ORACLE_MAX_TOKENS: string;
   ORACLE_TEMPERATURE: string;
   ORACLE_TIMEOUT: string;
@@ -51,6 +55,10 @@ function providerCredentials(
 
   if (kind === PROVIDER_GROQ) {
     return { apiKey: env.GROQ_API_KEY ?? "", model: env.GROQ_MODEL ?? "" };
+  }
+
+  if (kind === PROVIDER_ORCA) {
+    return { apiKey: env.ORCA_API_KEY ?? "", model: env.ORCA_MODEL ?? "" };
   }
 
   console.error(`unknown_oracle_provider kind=${kind}`);

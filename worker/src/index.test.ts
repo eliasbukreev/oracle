@@ -9,6 +9,8 @@ function makeEnv(overrides: Partial<Env> = {}): Env {
     OPENROUTER_MODEL: "openrouter-model",
     GROQ_API_KEY: "groq-key",
     GROQ_MODEL: "groq-model",
+    ORCA_API_KEY: "orca-key",
+    ORCA_MODEL: "orca-model",
     ORACLE_MAX_TOKENS: "1200",
     ORACLE_TEMPERATURE: "0.8",
     ORACLE_TIMEOUT: "20",
@@ -238,5 +240,51 @@ describe("worker fetch", () => {
     expect(res.status).toBe(200);
     const json = (await res.json()) as { cards: unknown[] };
     expect(json.cards).toHaveLength(3);
+  });
+
+  it("ORACLE_PROVIDER=orca ходит в api.orcarouter.ai", async () => {
+    const seenUrls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+        seenUrls.push(String(input));
+        return echoSpreadResponse(promptContent(init));
+      }),
+    );
+
+    const res = await worker.fetch(postRequest(), makeEnv({ ORACLE_PROVIDER: "orca" }));
+
+    expect(res.status).toBe(200);
+    expect(seenUrls).toHaveLength(1);
+    expect(seenUrls[0]).toBe("https://api.orcarouter.ai/v1/chat/completions");
+  });
+
+  it("fallback: при 500 от Orca спрашивает OpenRouter", async () => {
+    const seenUrls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+        const url = String(input);
+        seenUrls.push(url);
+        if (url.includes("orcarouter")) {
+          return new Response("{}", { status: 500 });
+        }
+        return echoSpreadResponse(promptContent(init));
+      }),
+    );
+
+    const res = await worker.fetch(
+      postRequest(),
+      makeEnv({
+        ORACLE_PROVIDER: "orca",
+        ORACLE_FALLBACK_PROVIDER: "openrouter",
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    const json = (await res.json()) as { cards: unknown[] };
+    expect(json.cards).toHaveLength(3);
+    expect(seenUrls[0]).toContain("orcarouter");
+    expect(seenUrls[1]).toContain("openrouter.ai");
   });
 });

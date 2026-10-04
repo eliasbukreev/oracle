@@ -4,9 +4,10 @@ import {
   createOpenRouterProvider,
   PROVIDER_OPENROUTER,
 } from "./providers/openrouter";
+import { createOrcaProvider, PROVIDER_ORCA } from "./providers/orca";
 import type { FetchImpl, OracleProvider, OracleProviderConfig } from "./types";
 
-export { PROVIDER_GROQ, PROVIDER_OPENROUTER };
+export { PROVIDER_GROQ, PROVIDER_OPENROUTER, PROVIDER_ORCA };
 
 const DEFAULT_TIMEOUT_MS = 20_000;
 
@@ -23,6 +24,10 @@ export function createProvider(
 
   if (kind === PROVIDER_GROQ) {
     return createGroqProvider(config, fetchImpl);
+  }
+
+  if (kind === PROVIDER_ORCA) {
+    return createOrcaProvider(config, fetchImpl);
   }
 
   throw new Error(`unknown_oracle_provider kind=${kind}`);
