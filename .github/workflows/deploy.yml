@@ -117,8 +117,9 @@ jobs:
       - name: Generate static site
         working-directory: frontend
         env:
-          NUXT_APP_BASE_URL: /${{ github.event.repository.name }}/
+          NUXT_APP_BASE_URL: ${{ vars.SITE_BASE_PATH }}
           NUXT_PUBLIC_ORACLE_API_URL: ${{ vars.CLOUDFLARE_WORKER_URL }}
+          NUXT_PUBLIC_SITE_URL: ${{ vars.SITE_URL }}
         run: npm run generate
 
       - name: Upload Pages artifact

@@ -4,6 +4,13 @@ const repositoryName = process.env.GITHUB_REPOSITORY?.split("/")[1];
 const defaultBaseURL =
   process.env.GITHUB_ACTIONS && repositoryName ? `/${repositoryName}/` : "/";
 
+// Полный URL сайта для canonical/og:url. В CI приходит из vars.SITE_URL
+// (кастомный домен, напр. https://oracle.fivemanarmy.ru); пока var пустой —
+// дефолт под текущий адрес на GitHub Pages.
+const siteUrl =
+  process.env.NUXT_PUBLIC_SITE_URL ||
+  "https://eliasbukreev.github.io/oracle/";
+
 export default defineNuxtConfig({
   compatibilityDate: "2025-01-15",
   modules: ["@nuxt/eslint", "@nuxt/icon", "@nuxt/fonts", "@vueuse/nuxt", "motion-v/nuxt"],
@@ -44,7 +51,7 @@ export default defineNuxtConfig({
       title: "Оракул — расклад Таро из трёх карт",
       link: [
         { rel: "icon", type: "image/x-icon", href: "favicon.ico" },
-        { rel: "canonical", href: "https://eliasbukreev.github.io/oracle/" },
+        { rel: "canonical", href: siteUrl },
       ],
       meta: [
         {
@@ -66,7 +73,7 @@ export default defineNuxtConfig({
         },
         {
           property: "og:url",
-          content: "https://eliasbukreev.github.io/oracle/",
+          content: siteUrl,
         },
         {
           property: "og:image",

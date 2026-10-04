@@ -157,10 +157,23 @@ Node везде 24: Nuxt 4 требует `^22.19.0 || ^24.11.0 || >=26`, а б�
 границу 22 в плавающем теге рискованно.
 
 1. `worker-check`: `npm ci`, `npm run check` (tsc), `npm run lint` (eslint), `npm run test` (vitest). Только на `push`: `wrangler secret put OPENROUTER_API_KEY` + `wrangler secret put GROQ_API_KEY` + `wrangler deploy --var ...`.
-2. `frontend`: `npm ci`, `npm run lint`, `npm run typecheck` (`nuxt prepare` + `vue-tsc`), `npm run test` (vitest), затем `nuxt generate` с `NUXT_APP_BASE_URL` и `NUXT_PUBLIC_ORACLE_API_URL` (из `vars.CLOUDFLARE_WORKER_URL`), загрузка артефакта Pages.
-3. `deploy-pages`: публикация на GitHub Pages. Только на `push`.
+  2. `frontend`: `npm ci`, `npm run lint`, `npm run typecheck` (`nuxt prepare` + `vue-tsc`), `npm run test` (vitest), затем `nuxt generate` с `NUXT_APP_BASE_URL` (из `vars.SITE_BASE_PATH`, пусто = `/oracle/`), `NUXT_PUBLIC_ORACLE_API_URL` (из `vars.CLOUDFLARE_WORKER_URL`) и `NUXT_PUBLIC_SITE_URL` (из `vars.SITE_URL`, пусто = текущий адрес Pages), загрузка артефакта Pages.
+  3. `deploy-pages`: публикация на GitHub Pages. Только на `push`.
 
-Нужные GitHub Secrets/Vars: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `GROQ_API_KEY`, `GROQ_MODEL`, `ORACLE_PROVIDER`, `ORACLE_FALLBACK_PROVIDER` (`groq` для связки openrouter → groq), `ORACLE_MAX_TOKENS`, `ORACLE_TEMPERATURE`, `ORACLE_TIMEOUT`, `CORS_ALLOWED_ORIGINS`, `CLOUDFLARE_WORKER_URL`, `TAROT_IMAGE_BASE_URL` (опц., см. «Изображения карт»).
+  Нужные GitHub Secrets/Vars: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `GROQ_API_KEY`, `GROQ_MODEL`, `ORACLE_PROVIDER`, `ORACLE_FALLBACK_PROVIDER` (`groq` для связки openrouter → groq), `ORACLE_MAX_TOKENS`, `ORACLE_TEMPERATURE`, `ORACLE_TIMEOUT`, `CORS_ALLOWED_ORIGINS`, `CLOUDFLARE_WORKER_URL`, `TAROT_IMAGE_BASE_URL` (опц., см. «Изображения карт»), `SITE_URL` + `SITE_BASE_PATH` (опц., см. «Переезд на свой домен»).
+
+  ## Переезд на свой домен (оставаясь на GitHub Pages)
+
+  Целевой адрес: `https://oracle.fivemanarmy.ru`. Код уже готов: пока vars
+  `SITE_URL`/`SITE_BASE_PATH` не заданы, сборка идёт как раньше (`/oracle/`).
+
+  Чеклист в день X (всё руками, кода трогать не надо):
+
+  1. DNS: у регистратора `oracle.fivemanarmy.ru` → GitHub Pages (CNAME на `<owner>.github.io`).
+  2. Репозиторий → Settings → Pages → Custom domain: `oracle.fivemanarmy.ru`, дождаться зелёной галочки HTTPS (Enforce HTTPS).
+  3. GitHub vars: `SITE_URL=https://oracle.fivemanarmy.ru`, `SITE_BASE_PATH=/`. Важно: Pages с кастомным доменом отдаёт проектный сайт с корня, поэтому именно `/`, а не `/oracle/` — иначе отвалятся `_nuxt/*` и favicon.
+  4. GitHub vars: добавить новый домен в `CORS_ALLOWED_ORIGINS` (иначе воркер отклонит запросы фронта).
+  5. Push в `main` (можно пустой коммит) → проверить расклад, картинки, canonical в исходнике страницы.
 
 Безопасность CI — отдельно в `.github/workflows/security.yml`: gitleaks (секреты), CodeQL (SAST, JS/TS), аудит зависимостей (воркер — чистый `npm audit`, фронт — `audit-ci` с allowlist). Все `uses:` в workflows запинены на SHA (без Dependabot обновляются вручную).
 
