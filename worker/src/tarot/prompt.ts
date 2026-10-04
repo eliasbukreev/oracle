@@ -1,4 +1,4 @@
-import type { DrawnCard } from "../types";
+import type { DrawnCard, TarotPosition } from "../types";
 import { deckCardById } from "./deck";
 import { ORIENTATION_LABELS_RU, POSITION_LABELS_RU } from "./draw";
 
@@ -7,9 +7,13 @@ export function tarotPrompt(question: string, drawnCards: DrawnCard[]): string {
     const deck = deckCardById(card.id);
     const reference =
       card.orientation === "reversed" ? deck?.meaningRev : deck?.meaningUp;
+    // TODO(шаг 2): подписи позиций — из SpreadDef, не из классической тройки.
+    const positionLabels = POSITION_LABELS_RU as Partial<
+      Record<TarotPosition, string>
+    >;
 
     return [
-      `${i + 1}. [${card.position} — ${POSITION_LABELS_RU[card.position]}] ${card.name} (id: ${card.id}), положение: ${ORIENTATION_LABELS_RU[card.orientation]}.`,
+      `${i + 1}. [${card.position} — ${positionLabels[card.position] ?? card.position}] ${card.name} (id: ${card.id}), положение: ${ORIENTATION_LABELS_RU[card.orientation]}.`,
       `   Эталонное значение: «${reference ?? "толкуй по классической традиции Райдера-Уэйта"}».`,
     ].join("\n");
   });

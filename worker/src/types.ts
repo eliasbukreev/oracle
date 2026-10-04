@@ -1,8 +1,28 @@
 // Платформенно-независимые контракты: домен и DI.
 // Модуль ничего не знает про Cloudflare, Request/Response и Env.
 
-/** Позиция карты в раскладе из трёх карт. */
-export type TarotPosition = "past" | "present" | "future";
+/** Идентификатор расклада. */
+export type SpreadId = "classic" | "relations" | "choice";
+
+export type TarotPosition = string;
+
+/** Описание расклада из реестра (spreads.ts). Подписи — только
+ *  для своих позиций, остальное промт не использует. */
+export interface SpreadDef {
+  id: SpreadId;
+  cardCount: number;
+  positions: string[];
+  positionLabelsRu: Record<string, string>;
+  /** Требует ли названия вариантов выбора (только choice). */
+  requiresVariants: boolean;
+}
+
+/** Названия вариантов для расклада «Крест выбора». Источник — запрос
+ *  пользователя, модель их подменить не может (см. validate.ts). */
+export interface ChoiceVariants {
+  a: string;
+  b: string;
+}
 
 /** Положение карты: прямая или перевёрнутая. Тянет сервер монеткой. */
 export type TarotOrientation = "upright" | "reversed";
@@ -15,10 +35,12 @@ export interface DrawnCard {
   orientation: TarotOrientation;
 }
 
-/** Вход провайдера: вопрос + уже вытянутые карты. */
+/** Вход провайдера: вопрос + расклад + уже вытянутые карты. */
 export interface TarotAskInput {
   question: string;
+  spread: SpreadDef;
   drawnCards: DrawnCard[];
+  variants?: ChoiceVariants;
 }
 
 /** Одна карта в ответе API: imageUrl — абсолютный URL картинки в R2
@@ -32,11 +54,14 @@ export interface TarotCard {
   imageUrl: string;
 }
 
-/** Расклад из трёх карт — ответ API. */
+/** Расклад — ответ API. Поле spread подсказывает фронту раскладку
+ *  финала (ряд или крест); variants — эхо запроса, не ответ модели. */
 export interface TarotResponse {
+  spread: SpreadId;
   cards: TarotCard[];
   summary: string;
   backImageUrl: string;
+  variants?: ChoiceVariants;
 }
 
 /** Нормализованный конфиг LLM-провайдера. Парсится из строк окружения

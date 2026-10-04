@@ -135,6 +135,8 @@ export function parseSpreadResponse(
   }
 
   return {
+    // TODO(шаг 2): spread и variants — из входа workflow, не хардкод.
+    spread: "classic",
     cards,
     summary: (raw.summary as string).trim(),
     backImageUrl: tarotBackImageUrl(imageBaseUrl),

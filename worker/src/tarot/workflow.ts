@@ -3,6 +3,7 @@
 import { parseQuestion } from "../oracle";
 import type { OracleProvider, TarotResponse } from "../types";
 import { drawThreeCards } from "./draw";
+import { SPREADS } from "./spreads";
 
 export interface TarotState {
   question: string;
@@ -30,5 +31,10 @@ export async function runTarotWorkflow(
 
   // Узлы 3-5 (prompt → call → validate) живут внутри провайдера,
   // чтобы fallback мог повторить всю связку тем же входом.
-  return state.provider.askTarot({ question, drawnCards });
+  // TODO(шаг 2): spread из тела запроса + drawSpread + variants для choice.
+  return state.provider.askTarot({
+    question,
+    spread: SPREADS.classic,
+    drawnCards,
+  });
 }

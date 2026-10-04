@@ -11,6 +11,8 @@ import type {
 } from "./types";
 
 const SPREAD: TarotResponse = {
+  // TODO(шаг 3): фикстуры под реестры раскладов.
+  spread: "classic",
   cards: [
     {
       id: "the-fool",

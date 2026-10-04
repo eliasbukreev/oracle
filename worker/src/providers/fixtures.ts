@@ -1,6 +1,7 @@
 // Общие фикстуры для тестов провайдеров. Не *.test.ts,
 // поэтому vitest не запускает файл как сьют.
 import { createProviderConfig } from "../providers";
+import { SPREADS } from "../tarot/spreads";
 import type {
   DrawnCard,
   FetchImpl,
@@ -68,6 +69,7 @@ export function validTarotInput(
 ): TarotAskInput {
   return {
     question: "Учить ли Rust?",
+    spread: SPREADS.classic,
     drawnCards: DRAWN_CARDS,
     ...overrides,
   };

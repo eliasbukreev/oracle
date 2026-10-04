@@ -1,10 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { OracleProvider, ProviderAnswer, TarotAskInput } from "../types";
+import { SPREADS } from "../tarot/spreads";
 import { createFallbackProvider } from "./fallback";
 
 const ANSWER: ProviderAnswer = {
   ok: true,
   response: {
+    // TODO(шаг 3): фикстуры под реестры раскладов.
+    spread: "classic",
     cards: [
       {
         id: "the-fool",
@@ -38,6 +41,7 @@ const ANSWER: ProviderAnswer = {
 
 const INPUT: TarotAskInput = {
   question: "Учить ли Rust?",
+  spread: SPREADS.classic,
   drawnCards: [
     { id: "the-fool", name: "Шут", position: "past", orientation: "upright" },
     {

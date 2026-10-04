@@ -390,7 +390,8 @@ describe("runTarotWorkflow", () => {
         seen = input;
         return {
           ok: true as const,
-          response: { cards: [], summary: "ok", backImageUrl: "" },
+          // TODO(шаг 3): фикстуры под реестры раскладов.
+          response: { spread: "classic" as const, cards: [], summary: "ok", backImageUrl: "" },
         };
       },
     };
