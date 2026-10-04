@@ -29,20 +29,29 @@ docs/       # документация
 указывает на `app/`, а `nuxt.config.ts`, `public/` и `vitest.config.ts` живут
 в корне `frontend/`.
 
-- `app/app.vue` — каркас страницы
+- `app/app.vue` — каркас: панель + `AnimatePresence` с экранами
 - `app/components/OracleForm.vue` — ввод вопроса
-- `app/components/OracleResult.vue` — показ ответа
+- `app/components/TarotScreenHome.vue` — экран вопроса (шапка + форма + статус)
+- `app/components/TarotScreenLoading.vue` — экран загрузки
+- `app/components/TarotCardScreen.vue` — экран карты (слева карта, справа текст, кнопка под текстом)
+- `app/components/TarotScreenFinale.vue` — итог + миниатюры + «Новый вопрос»
+- `app/components/TarotCardImage.vue` — картинка карты (рубашка до загрузки, поворот перевёрнутой)
 - `app/components/OracleStatus.vue` — показ ошибки
-- `app/composables/useOracle.ts` — состояние `result / error / isLoading / isBlocked`
+- `app/composables/useOracle.ts` — запрос к API: `result / error / isLoading / isBlocked`
+- `app/composables/useTarotFlow.ts` — тонкая Vue-обёртка над машиной экранов
+- `app/services/tarotFlow.ts` — чистая машина `home → loading → card-0 → card-1 → card-2 → finale` (редьюсер, только вперёд)
+- `app/services/screenMotion.ts` — параметры перехода экранов (fade+slide 0.25с)
 - `app/services/oracleApi.ts` — `POST { question }` на URL воркера (таймаут 40с)
 - `app/types/oracle.ts` — типы ответа и ошибок
-- `nuxt.config.ts` — `oracleApiUrl` из `NUXT_PUBLIC_ORACLE_API_URL`, `baseURL` из `NUXT_APP_BASE_URL`
+- `nuxt.config.ts` — `oracleApiUrl` из `NUXT_PUBLIC_ORACLE_API_URL`, `baseURL` из `NUXT_APP_BASE_URL`; модуль `motion-v/nuxt`
 - `app/app.config.ts` — режим иконок (`css` + слой `base`, иначе маски перебивают утилиты Tailwind)
 
 Стек фронта минимальный: Nuxt 4, Tailwind v4 (через `@tailwindcss/vite`),
-`@nuxt/icon` + локальная коллекция `lucide`, `@nuxt/fonts`, `@vueuse/nuxt`
-и `motion-v` подключены, но пока не используются — взяты как основа для
-следующих фич. Пинга нет, состояние живёт в одном composable.
+`@nuxt/icon` + локальная коллекция `lucide`, `@nuxt/fonts`, `@vueuse/nuxt`,
+`motion-v` (переходы экранов через `AnimatePresence mode="wait"`, `<motion.div>`
+импортируется вручную — автоимпорт его не подхватывает; `MotionConfig
+reduced-motion="user"` гасит анимации по системной настройке). Пинга нет,
+состояние живёт в composables.
 
 Три неочевидных места, из-за которых всё ломается тихо:
 

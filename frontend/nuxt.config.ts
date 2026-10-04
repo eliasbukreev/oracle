@@ -6,7 +6,7 @@ const defaultBaseURL =
 
 export default defineNuxtConfig({
   compatibilityDate: "2025-01-15",
-  modules: ["@nuxt/eslint", "@nuxt/icon", "@nuxt/fonts", "@vueuse/nuxt"],
+  modules: ["@nuxt/eslint", "@nuxt/icon", "@nuxt/fonts", "@vueuse/nuxt", "motion-v/nuxt"],
   css: ["~/assets/css/main.css"],
   fonts: {
     families: [
