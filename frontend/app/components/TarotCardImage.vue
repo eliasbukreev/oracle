@@ -17,7 +17,7 @@ const showFace = computed(() => props.src && !failed.value);
 <template>
   <figure
     v-if="src || backSrc"
-    class="m-0 mb-3 aspect-[300/527] w-full overflow-hidden rounded-card border border-edge-soft/14 bg-black/30"
+    class="m-0 mb-3 aspect-[300/527] w-full overflow-hidden border border-brass-line/70 bg-black/30 shadow-card"
   >
     <!-- Рубашка: видна пока лицо грузится или если оно не загрузилось -->
     <img

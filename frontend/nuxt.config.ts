@@ -11,16 +11,18 @@ export default defineNuxtConfig({
   fonts: {
     families: [
       {
-        name: "DM Sans",
+        name: "Cormorant Garamond",
+        provider: "google",
+        weights: [400, 500, 600],
+        styles: ["normal", "italic"],
+        subsets: ["cyrillic", "latin"],
+      },
+      {
+        name: "Manrope",
         provider: "google",
         weights: [400, 500, 600],
         styles: ["normal"],
-      },
-      {
-        name: "Playfair Display",
-        provider: "google",
-        weights: [500],
-        styles: ["normal"],
+        subsets: ["cyrillic", "latin"],
       },
     ],
   },

@@ -18,12 +18,12 @@ const emit = defineEmits<{
 <template>
   <div>
     <header class="text-center">
-      <div class="mx-auto mb-4.5 grid size-12 place-items-center rounded-full border border-orb-line bg-orb-fill text-xl text-orb-ink shadow-orb">
+      <div class="mx-auto mb-4.5 grid size-12 place-items-center rounded-full border border-brass-line bg-edge-faint text-xl text-brass shadow-orb">
         <Icon name="i-lucide-sparkles" />
       </div>
-      <p class="m-0 text-caption font-semibold tracking-overline text-overline uppercase">Твое тайное предсказание</p>
-      <h1 class="font-display my-2.5 text-[clamp(42px,8vw,58px)] leading-none font-medium tracking-display text-ink-bright">Оракул</h1>
-      <p class="mt-0 mb-[35px] text-body text-muted leading-[1.65]">
+      <p class="m-0 text-caption font-semibold tracking-overline text-brass uppercase">Твое тайное предсказание</p>
+      <h1 class="font-display my-2.5 text-[clamp(42px,8vw,58px)] leading-none font-medium tracking-display text-paper">Оракул</h1>
+      <p class="font-display mt-0 mb-[35px] text-lead text-muted italic leading-[1.35]">
         Задай вопрос. Иногда ответ уже ждет,<br class="max-phone:hidden"> когда ты его услышишь.
       </p>
     </header>

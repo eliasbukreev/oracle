@@ -24,12 +24,11 @@ const currentCard = computed(() => result.value?.cards[cardIndex.value])
 
 <template>
   <MotionConfig reduced-motion="user">
-    <main class="grid-mask relative grid min-h-screen place-items-center overflow-hidden bg-night px-5 py-12 max-phone:px-3.5 max-phone:py-5">
-      <div class="pointer-events-none absolute -top-45 right-[12%] size-[360px] rounded-full bg-glow-top opacity-20 blur-[90px]" aria-hidden="true" />
-      <div class="pointer-events-none absolute -bottom-57.5 left-[8%] size-[360px] rounded-full bg-glow-bottom opacity-20 blur-[90px]" aria-hidden="true" />
+    <main class="starfield relative grid min-h-screen place-items-center overflow-hidden bg-ink px-5 py-12 max-phone:px-3.5 max-phone:py-5">
+      <div class="pointer-events-none absolute top-[12%] left-1/2 h-[400px] w-[500px] -translate-x-1/2 rounded-full bg-glow opacity-20 blur-[110px]" aria-hidden="true" />
 
       <section
-        class="relative w-full rounded-panel border border-edge/16 bg-panel/86 px-13 pt-12 pb-7.5 shadow-panel backdrop-blur-[14px] transition-[max-width] duration-300 max-phone:rounded-[22px] max-phone:px-5 max-phone:pt-8.5 max-phone:pb-6"
+        class="relative z-[1] w-full border border-edge bg-panel/90 px-13 pt-12 pb-7.5 shadow-panel backdrop-blur-[14px] transition-[max-width] duration-300 max-phone:px-5 max-phone:pt-8.5 max-phone:pb-6"
         :class="isWideScreen ? 'max-w-[720px]' : 'max-w-[580px]'"
       >
         <AnimatePresence mode="wait">

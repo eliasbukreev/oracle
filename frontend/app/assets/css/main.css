@@ -1,91 +1,69 @@
 @import "tailwindcss";
 
-/* Тёмная тема единственная: цвета из @theme идут базовыми, без dark:-вариантов. */
+/* Тёмная тема единственная: цвета из @theme идут базовыми, без dark:-вариантов.
+   Палитра — по docs/VISUAL_GUIDE.md: чернильный мрак, латунь, warm-gray шкала.
+   Скруглений нет (все радиусы 0): круги — только там, где круг задуман. */
 @theme {
-  --font-sans: "DM Sans", sans-serif;
-  --font-display: "Playfair Display", serif;
+  --font-sans: "Manrope", sans-serif;
+  --font-display: "Cormorant Garamond", serif;
 
   /* Мобильная вёрстка начинается с 560px, как в исходном CSS, а не с
      стандартных 640px, поэтому объявляем свой брейкпоинт. */
   --breakpoint-phone: 560px;
 
-  --color-night: #120d24;
-  --color-panel: #1c1435;
-  --color-raise: #171128;
+  /* Ядро */
+  --color-ink: #0b0b14;
+  --color-paper: #eee7d8;
+  --color-brass: #c9a96e;
+  --color-muted: #b4a9a1;
 
-  --color-accent: #c8a9ff;
-  --color-accent-soft: #dac5ff;
-  --color-accent-ink: #1b112d;
+  /* Поверхности */
+  --color-panel: #0d0d17;
+  --color-raise: #11101e;
+  --color-hero-top: #28172e;
+  --color-card-hover: rgba(91, 38, 61, 0.12);
 
-  --color-orb-line: #9b78e8;
-  --color-orb-fill: #302061;
-  --color-orb-ink: #d7c4ff;
+  /* Бордеры */
+  --color-brass-line: #9b7b47;
+  --color-brass-deep: #7d643a;
+  --color-edge-faint: rgba(201, 169, 110, 0.13);
+  --color-edge: rgba(201, 169, 110, 0.18);
+  --color-edge-strong: rgba(201, 169, 110, 0.2);
+  --color-edge-inner: rgba(201, 169, 110, 0.55);
 
-  --color-ink: #f6f1ff;
-  --color-ink-bright: #fffaff;
-  --color-muted: #a99ebf;
-  --color-overline: #aa91d9;
-  --color-faint: #6e6382;
-  --color-count: #746886;
-  --color-confidence: #ae95df;
-  --color-label: #e2d9f2;
+  /* Текст warm-gray */
+  --color-soft: #9b9090;
+  --color-dim: #81777a;
+  --color-faint: #736c6e;
+  --color-link: #a79c98;
+  --color-placeholder: #81777a;
 
-  --color-field-line: #48366a;
-  --color-field-focus: #9772e2;
-  --color-input: #f5efff;
-  --color-placeholder: #706583;
+  /* Свечения */
+  --color-glow: #632743;
+  --color-card-glow: #792c50;
 
-  --color-verdict: #f4eaff;
-  --color-prophecy: #f0eafa;
-  --color-reason-ink: #b7a9ca;
-  --color-reason-mark: #b78cff;
-  --color-countdown: #e3b8f5;
-
-  --color-glow-top: #8f62ff;
-  --color-glow-bottom: #4d2d9a;
-
-  --color-warn: #e8b26b;
-  --color-warn-line: #ffbe78;
-  --color-warn-fill: #4e301c;
-
-  --color-edge: #d0baff;
-  --color-edge-soft: #ccb3ff;
-  --color-edge-lit: #b794ff;
-  --color-edge-rose: #e9aeff;
-
-  --color-oracle-from: #4e307f;
-  --color-oracle-to: #2e1d50;
-  --color-status-fill: #44235b;
-  --color-status-symbol: #d09be9;
-  --color-status-ink: #d8cde9;
-  --color-status-title: #f1e8fc;
-  --color-symbol-ink: #251434;
-
-  --color-grid: #b99dff;
-
-  --radius-button: 12px;
-  --radius-field: 13px;
-  --radius-card: 15px;
-  --radius-panel: 28px;
+  --radius-button: 0;
+  --radius-field: 0;
+  --radius-card: 0;
+  --radius-panel: 0;
 
   /* Размеры шрифта получили собственные имена: namespace text-* в Tailwind
-     обслуживает и размер, и цвет, поэтому text-overline / text-label /
-     text-prophecy / text-verdict конфликтовали бы с цветовыми токенами. */
+     обслуживает и размер, и цвет, поэтому text-* имена не должны
+     пересекаться с цветовыми токенами выше. */
   --text-caption: 11px;
   --text-note: 13px;
   --text-body: 15px;
   --text-lead: 18px;
   --text-display: 34px;
 
-  --tracking-overline: 0.16em;
-  --tracking-display: -0.04em;
-  --tracking-verdict: 0.04em;
+  --tracking-overline: 0.27em;
+  --tracking-display: -0.055em;
 
   --shadow-panel: 0 30px 90px rgb(3 1 12 / 35%),
     inset 0 1px rgb(255 255 255 / 5%);
-  --shadow-orb: 0 0 32px rgb(139 97 239 / 30%);
-  --shadow-lift: 0 8px 25px rgb(168 126 255 / 20%);
-  --shadow-focus: 0 0 0 3px rgb(151 114 226 / 14%);
+  --shadow-orb: 0 0 32px rgb(201 169 110 / 25%);
+  --shadow-card: 0 0 55px rgb(121 44 80 / 45%);
+  --shadow-focus: 0 0 0 3px rgb(201 169 110 / 14%);
 
   --animate-spin-fast: spin 0.7s linear infinite;
 
@@ -107,17 +85,31 @@
 }
 
 @layer components {
-  /* Фоновая сетка с вертикальной маской — одной утилитой не собрать:
-     два градиента плюс mask-image. */
-  .grid-mask::before {
+  /* Звёздное поле: hero-градиент внизу, два слоя точек (paper + brass)
+     поверх. Контент внутри .starfield должен быть выше (z-[1]).
+     Одной утилитой не собрать: несколько background-image плюс маска. */
+  .starfield::before {
     position: absolute;
     inset: 0;
-    background-image: linear-gradient(
-        var(--color-grid) / 3.5% 1px,
-        transparent 1px
-      ),
-      linear-gradient(90deg, var(--color-grid) / 3.5% 1px, transparent 1px);
-    background-size: 56px 56px;
+    background: radial-gradient(
+      ellipse at 50% 38%,
+      var(--color-hero-top) 0%,
+      var(--color-raise) 36%,
+      transparent 70%
+    );
+    content: "";
+  }
+
+  .starfield::after {
+    position: absolute;
+    inset: 0;
+    background-image:
+      radial-gradient(var(--color-paper) 1px, transparent 1px),
+      radial-gradient(var(--color-brass) 1px, transparent 1px);
+    background-size:
+      173px 197px,
+      271px 229px;
+    opacity: 0.3;
     content: "";
     mask-image: linear-gradient(
       to bottom,

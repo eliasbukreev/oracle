@@ -13,7 +13,7 @@ const emit = defineEmits<{
 <template>
   <div aria-live="polite" aria-label="Итог расклада">
     <div class="mb-4 text-center">
-      <span class="text-caption font-semibold tracking-overline text-overline uppercase">Расклад завершён</span>
+      <span class="text-caption font-semibold tracking-overline text-brass uppercase">Расклад завершён</span>
     </div>
 
     <ol class="m-0 mb-5 grid list-none grid-cols-3 gap-2.5 p-0">
@@ -27,14 +27,14 @@ const emit = defineEmits<{
       </li>
     </ol>
 
-    <div class="flex gap-2.5 rounded-card border border-edge-soft/14 bg-black/20 p-4 text-note leading-[1.55] text-reason-ink">
-      <Icon name="i-lucide-sparkles" class="shrink-0 text-reason-mark" aria-hidden="true" />
-      <p class="m-0">{{ result.summary }}</p>
+    <div class="flex gap-2.5 border border-edge bg-black/20 p-4 text-note leading-[1.55] text-soft">
+      <Icon name="i-lucide-sparkles" class="shrink-0 text-brass" aria-hidden="true" />
+      <p class="font-display m-0 text-lead leading-[1.5]">{{ result.summary }}</p>
     </div>
 
     <button
       type="button"
-      class="mt-5 flex min-h-13 w-full cursor-pointer items-center justify-center gap-2.25 rounded-button bg-accent px-5 py-3.5 font-semibold text-accent-ink transition-[background,box-shadow,transform] duration-200 hover:-translate-y-px hover:bg-accent-soft hover:shadow-lift"
+      class="mt-5 flex min-h-13 w-full cursor-pointer items-center justify-center gap-2.25 border border-brass-line bg-edge-faint px-5 py-3.5 text-caption font-semibold tracking-overline text-brass uppercase transition-colors duration-200 hover:bg-brass hover:text-ink"
       @click="emit('reset')"
     >
       <span>Новый вопрос</span>
