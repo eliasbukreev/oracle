@@ -1,19 +1,20 @@
-# Оракул — расклад Таро из трёх карт
+# Оракул — расклады Таро
 
 **Демо: https://oracle.fivemanarmy.ru**
 
 Мистический одностраничник: задаёшь вопрос — получаешь расклад
-«прошлое / настоящее / будущее» с толкованием от LLM. Живёт на
-GitHub Pages + Cloudflare Workers.
+с толкованием от LLM. Расклад подбирает классификатор: классика (3),
+отношения (5), крест выбора (5), да/нет (3), диагностика (5),
+период (5), карта дня (1). Живёт на GitHub Pages + Cloudflare Workers.
 
 ```text
 Nuxt-статика (GitHub Pages)
   │ POST { question }
   ▼
-Cloudflare Worker (валидация → 3 карты + положение → промпт → LLM → проверка)
+Cloudflare Worker (валидация → classify → N карт + положение → промпт → LLM → проверка)
   │ HTTPS
   ▼
-OpenRouter → Groq (fallback)
+Цепочка провайдеров (OpenRouter → Groq → Orca, первый живой отвечает)
 ```
 
 Карты тянет сервер из полной колоды (78, Райдер–Уэйт), положение
@@ -25,9 +26,12 @@ OpenRouter → Groq (fallback)
 ```text
 frontend/   # Nuxt 4, app-like экраны с motion-v
 worker/     # Cloudflare Worker, TypeScript + vitest
+shared/     # общий контракт: zod-схемы, типы, подписи позиций
 docs/       # ARCHITECTURE.md, VISUAL_GUIDE.md
 temp/       # исходники колоды и конвертер в WebP (в git не едет)
 ```
+
+Контракт правится только в `shared/` — воркер и фронт реэкспортируют.
 
 ## Локальный запуск
 
@@ -35,18 +39,19 @@ temp/       # исходники колоды и конвертер в WebP (в 
 cd frontend && npm install && npm run dev   # http://localhost:3000
 ```
 
-В dev внизу экрана — панель `dev`: превью загрузки, карт и финала
-без бэкенда. Проверки: `npm run lint`, `npm run typecheck`, `npm run test`
-в каждом пакете (`worker`: ещё `npm run check`).
+Проверки в каждом пакете (`frontend`, `worker`, `shared`):
+`npm run lint`, `npm run test`, плюс `npm run check` (`worker`, `shared`)
+и `npm run typecheck` (`frontend`).
 
-## Переменные в Github Actions
+## Переменные в GitHub Actions
 
-### Variavles
+### Variables
 
 `CLOUDFLARE_ACCOUNT_ID` - cf аккаунт
 `CLOUDFLARE_WORKER_URL` - адрес cf воркера
 `OPENROUTER_MODEL` - название модели openrouter | openai/gpt-oss-20b
 `GROQ_MODEL` - название модели groq | qwen/qwen3.8-27b:free
+`ORCA_MODEL` - название модели orca
 `ORACLE_PROVIDERS` - цепочка провайдеров через запятую, первый — primary | openrouter,groq,orca
 `ORACLE_MAX_TOKENS` - максимальное количество токенов в ответе | 2500
 `ORACLE_TEMPERATURE` - температура модели, больше - эзотеричнее | 0.8
