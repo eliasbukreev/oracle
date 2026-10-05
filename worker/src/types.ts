@@ -80,11 +80,19 @@ export interface OracleProviderConfig {
 
 export type FetchImpl = typeof fetch;
 
+/** Результат классификации вопроса: расклад + извлечённые варианты. */
+export interface Classification {
+  spread: SpreadDef;
+  variants?: ChoiceVariants;
+}
+
 /** DI-контракт LLM-провайдера. Хендлер зависит только от него,
  *  конкретная реализация (OpenRouter, Groq, ...) подставляется снаружи. */
 export interface OracleProvider {
   readonly name: string;
   askTarot(input: TarotAskInput): Promise<ProviderAnswer>;
+  /** Дешёвый выбор расклада. Null при любом сбое — workflow берёт classic. */
+  classify(question: string): Promise<Classification | null>;
 }
 
 export type ProviderAnswer =

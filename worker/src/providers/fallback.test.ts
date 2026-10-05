@@ -59,7 +59,7 @@ const INPUT: TarotAskInput = {
 };
 
 function stubProvider(answer: ProviderAnswer, name = "stub"): OracleProvider {
-  return { name, askTarot: async () => answer };
+  return { name, askTarot: async () => answer, classify: async () => null };
 }
 
 beforeEach(() => {
@@ -76,6 +76,7 @@ describe("FallbackProvider", () => {
     const provider = createFallbackProvider(stubProvider(ANSWER, "primary"), {
       name: "secondary",
       askTarot: secondaryAsk,
+      classify: async () => null,
     });
 
     expect(provider.name).toBe("fallback(primary+secondary)");
@@ -87,7 +88,7 @@ describe("FallbackProvider", () => {
     const secondaryAsk = vi.fn(async () => ANSWER);
     const provider = createFallbackProvider(
       stubProvider({ ok: false, blocked: false }, "primary"),
-      { name: "secondary", askTarot: secondaryAsk },
+      { name: "secondary", askTarot: secondaryAsk, classify: async () => null },
     );
 
     await expect(provider.askTarot(INPUT)).resolves.toEqual(ANSWER);
@@ -98,7 +99,7 @@ describe("FallbackProvider", () => {
     const secondaryAsk = vi.fn(async () => ANSWER);
     const provider = createFallbackProvider(
       stubProvider({ ok: false, blocked: true }, "primary"),
-      { name: "secondary", askTarot: secondaryAsk },
+      { name: "secondary", askTarot: secondaryAsk, classify: async () => null },
     );
 
     await expect(provider.askTarot(INPUT)).resolves.toEqual(ANSWER);
@@ -125,5 +126,38 @@ describe("FallbackProvider", () => {
       ok: false,
       blocked: false,
     });
+  });
+
+  it("classify: берёт ответ primary", async () => {
+    const classified = { spread: SPREADS.relations };
+    const provider = createFallbackProvider(
+      { name: "primary", askTarot: async () => ANSWER, classify: async () => classified },
+      stubProvider(ANSWER, "secondary"),
+    );
+    await expect(provider.classify("Любит ли меня?")).resolves.toEqual(
+      classified,
+    );
+  });
+
+  it("classify: при null от primary спрашивает secondary", async () => {
+    const classified = { spread: SPREADS.choice };
+    const secondaryClassify = vi.fn(async () => classified);
+    const provider = createFallbackProvider(stubProvider(ANSWER, "primary"), {
+      name: "secondary",
+      askTarot: async () => ANSWER,
+      classify: secondaryClassify,
+    });
+    await expect(provider.classify("Что выбрать?")).resolves.toEqual(
+      classified,
+    );
+    expect(secondaryClassify).toHaveBeenCalledWith("Что выбрать?");
+  });
+
+  it("classify: null когда пусты оба", async () => {
+    const provider = createFallbackProvider(
+      stubProvider(ANSWER, "primary"),
+      stubProvider(ANSWER, "secondary"),
+    );
+    await expect(provider.classify("Учить ли Rust?")).resolves.toBeNull();
   });
 });

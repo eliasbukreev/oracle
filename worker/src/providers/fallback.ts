@@ -1,4 +1,9 @@
-import type { OracleProvider, ProviderAnswer, TarotAskInput } from "../types";
+import type {
+  Classification,
+  OracleProvider,
+  ProviderAnswer,
+  TarotAskInput,
+} from "../types";
 
 export function createFallbackProvider(
   primary: OracleProvider,
@@ -15,5 +20,21 @@ export function createFallbackProvider(
     return secondary.askTarot(input);
   }
 
-  return { name: `fallback(${primary.name}+${secondary.name})`, askTarot };
+  async function classify(question: string): Promise<Classification | null> {
+    // Классификация дешёвая: при сбое primary пробуем secondary,
+    // итоговая неудача — null, workflow возьмёт classic.
+    const first = await primary.classify(question);
+    if (first) return first;
+
+    console.warn(
+      `provider_classify_fallback from=${primary.name} to=${secondary.name}`,
+    );
+    return secondary.classify(question);
+  }
+
+  return {
+    name: `fallback(${primary.name}+${secondary.name})`,
+    askTarot,
+    classify,
+  };
 }

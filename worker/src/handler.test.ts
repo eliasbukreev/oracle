@@ -43,7 +43,7 @@ const SPREAD: TarotResponse = {
 };
 
 function stubProvider(answer: ProviderAnswer): OracleProvider {
-  return { name: "stub", askTarot: async () => answer };
+  return { name: "stub", askTarot: async () => answer, classify: async () => null };
 }
 
 function makeDeps(overrides: Partial<OracleDeps> = {}): OracleDeps {
@@ -193,7 +193,7 @@ describe("handleAsk", () => {
     >(async () => ({ ok: true, response: SPREAD }));
     const res = await handleAsk(
       postRequest({ question: "  Учить ли Rust?  " }),
-      makeDeps({ provider: { name: "stub", askTarot } }),
+      makeDeps({ provider: { name: "stub", askTarot, classify: async () => null } }),
     );
 
     expect(res.status).toBe(200);

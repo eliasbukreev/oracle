@@ -8,6 +8,7 @@ import {
   drawSpread,
   drawThreeCards,
 } from "./draw";
+import { classifyPrompt, parseClassification } from "./classify";
 import { tarotPrompt } from "./prompt";
 import { SPREADS } from "./spreads";
 import { isTarotResponse, parseSpreadResponse } from "./validate";
@@ -402,6 +403,10 @@ describe("runTarotWorkflow", () => {
       {
         provider: {
           name: "stub",
+          classify: async () => {
+            called = true;
+            return null;
+          },
           askTarot: async () => {
             called = true;
             return { ok: false, blocked: false };
@@ -421,6 +426,7 @@ describe("runTarotWorkflow", () => {
     let seen: unknown;
     const provider = {
       name: "stub",
+      classify: async () => null,
       askTarot: async (input: {
         question: string;
         drawnCards: DrawnCard[];
@@ -441,10 +447,39 @@ describe("runTarotWorkflow", () => {
     expect((seen as { drawnCards: DrawnCard[] }).drawnCards).toHaveLength(3);
   });
 
-  it("relations: тянет 5 карт и отдаёт spread", async () => {
+  it("сбой классификатора даёт classic", async () => {
     let seen: unknown;
     const provider = {
       name: "stub",
+      classify: async () => {
+        throw new Error("boom");
+      },
+      askTarot: async (input: { spread: { id: string } }) => {
+        seen = input;
+        return {
+          ok: true as const,
+          response: {
+            spread: "classic" as const,
+            cards: [],
+            summary: "ok",
+            backImageUrl: "",
+          },
+        };
+      },
+    };
+    const result = await runTarotWorkflow(
+      { question: "Учить ли Rust?" },
+      { provider, randomFn: () => 0 },
+    );
+    expect(result.ok).toBe(true);
+    expect(seen).toMatchObject({ spread: { id: "classic" } });
+  });
+
+  it("relations: классификатор выбирает расклад, тянутся 5 карт", async () => {
+    let seen: unknown;
+    const provider = {
+      name: "stub",
+      classify: async () => ({ spread: SPREADS.relations }),
       askTarot: async (input: {
         question: string;
         spread: { id: string };
@@ -463,7 +498,7 @@ describe("runTarotWorkflow", () => {
       },
     };
     const result = await runTarotWorkflow(
-      { question: "Любит ли меня?", spread: "relations" },
+      { question: "Любит ли меня?" },
       { provider, randomFn: () => 0 },
     );
     expect(result.ok).toBe(true);
@@ -474,56 +509,14 @@ describe("runTarotWorkflow", () => {
     ).toEqual(["self", "other", "attraction", "obstacle", "potential"]);
   });
 
-  it("неизвестный spread даёт classic", async () => {
+  it("choice: варианты классификатора прокидываются в провайдер", async () => {
     let seen: unknown;
     const provider = {
       name: "stub",
-      askTarot: async (input: { spread: { id: string } }) => {
-        seen = input;
-        return {
-          ok: true as const,
-          response: {
-            spread: "classic" as const,
-            cards: [],
-            summary: "ok",
-            backImageUrl: "",
-          },
-        };
-      },
-    };
-    await runTarotWorkflow(
-      { question: "Учить ли Rust?", spread: "celtic" },
-      { provider, randomFn: () => 0 },
-    );
-    expect(seen).toMatchObject({ spread: { id: "classic" } });
-  });
-
-  it("choice без вариантов возвращает invalid_request без вызова провайдера", async () => {
-    let called = false;
-    const result = await runTarotWorkflow(
-      { question: "Что выбрать?", spread: "choice" },
-      {
-        provider: {
-          name: "stub",
-          askTarot: async () => {
-            called = true;
-            return { ok: false, blocked: false };
-          },
-        },
-      },
-    );
-    expect(result).toEqual({
-      ok: false,
-      blocked: false,
-      error: "invalid_request",
-    });
-    expect(called).toBe(false);
-  });
-
-  it("choice с вариантами прокидывает их в провайдер", async () => {
-    let seen: unknown;
-    const provider = {
-      name: "stub",
+      classify: async () => ({
+        spread: SPREADS.choice,
+        variants: { a: "Сменить работу", b: "Остаться" },
+      }),
       askTarot: async (input: {
         variants?: { a: string; b: string };
         drawnCards: DrawnCard[];
@@ -542,11 +535,7 @@ describe("runTarotWorkflow", () => {
       },
     };
     const result = await runTarotWorkflow(
-      {
-        question: "Что выбрать?",
-        spread: "choice",
-        variants: { a: "  Сменить работу ", b: "Остаться" },
-      },
+      { question: "Уволиться или остаться?" },
       { provider, randomFn: () => 0 },
     );
     expect(result.ok).toBe(true);
@@ -554,6 +543,31 @@ describe("runTarotWorkflow", () => {
       variants: { a: "Сменить работу", b: "Остаться" },
     });
     expect((seen as { drawnCards: DrawnCard[] }).drawnCards).toHaveLength(5);
+  });
+
+  it("поле spread в запросе игнорируется: решает классификатор", async () => {
+    let seen: unknown;
+    const provider = {
+      name: "stub",
+      classify: async () => null,
+      askTarot: async (input: { spread: { id: string } }) => {
+        seen = input;
+        return {
+          ok: true as const,
+          response: {
+            spread: "classic" as const,
+            cards: [],
+            summary: "ok",
+            backImageUrl: "",
+          },
+        };
+      },
+    };
+    await runTarotWorkflow(
+      { question: "Учить ли Rust?", spread: "choice" },
+      { provider, randomFn: () => 0 },
+    );
+    expect(seen).toMatchObject({ spread: { id: "classic" } });
   });
 });
 
@@ -651,5 +665,56 @@ describe("parseSpreadResponse spreads", () => {
       SPREADS.choice,
     );
     expect(result?.cards).toHaveLength(5);
+  });
+});
+
+describe("classify", () => {
+  it("промт перечисляет расклады и требует JSON", () => {
+    const prompt = classifyPrompt("Уволиться или остаться?");
+    expect(prompt).toContain("Уволиться или остаться?");
+    expect(prompt).toContain("classic");
+    expect(prompt).toContain("relations");
+    expect(prompt).toContain("choice");
+    expect(prompt).toContain("JSON");
+  });
+
+  it("разбирает choice с вариантами", () => {
+    expect(
+      parseClassification(
+        JSON.stringify({
+          spread: "choice",
+          variants: { a: "Уволиться", b: "Остаться" },
+        }),
+      ),
+    ).toEqual({
+      spread: SPREADS.choice,
+      variants: { a: "Уволиться", b: "Остаться" },
+    });
+  });
+
+  it("разбирает relations без вариантов", () => {
+    expect(parseClassification(JSON.stringify({ spread: "relations" }))).toEqual(
+      {
+        spread: SPREADS.relations,
+      },
+    );
+  });
+
+  it("снимает markdown-обёртку", () => {
+    expect(
+      parseClassification('```json\n{"spread": "classic"}\n```'),
+    ).toEqual({ spread: SPREADS.classic });
+  });
+
+  it.each([
+    "не json",
+    '{"spread": "celtic"}',
+    '{"spread": "choice"}',
+    '{"spread": "choice", "variants": {"a": "", "b": "x"}}',
+    '{"spread": "choice", "variants": {"a": "x"}}',
+    "[]",
+    "",
+  ])("сомнительное даёт classic: %s", (content) => {
+    expect(parseClassification(content)).toEqual({ spread: SPREADS.classic });
   });
 });

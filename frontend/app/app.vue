@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { motion } from "motion-v";
 import backUrl from "~/assets/img/CardBacks.webp?url";
+import { PREVIEWS } from "~/services/tarotPreview";
+import type { SpreadId } from "~/types/oracle";
 import { SCREEN_TRANSITION } from "~/services/screenMotion";
 
 // Рубашка предзагружается со стартом: к экрану карты уже в кэше, мигания нет.
@@ -22,10 +24,18 @@ const {
   ask,
   nextCard,
   reset,
+  preview,
+  goFinale,
 } = useTarotFlow()
 
+const isDev = import.meta.dev;
 const isWideScreen = computed(() => screen.value === 'card' || screen.value === 'finale')
 const currentCard = computed(() => result.value?.cards[cardIndex.value])
+const cardTotal = computed(() => result.value?.cards.length ?? 0)
+
+function previewSpread(spread: SpreadId) {
+  preview(PREVIEWS[spread]);
+}
 </script>
 
 <template>
@@ -62,11 +72,18 @@ const currentCard = computed(() => result.value?.cards[cardIndex.value])
             />
             <TarotScreenLoading v-else-if="screen === 'loading'" />
             <TarotCardScreen
-              v-else-if="screen === 'card' && currentCard"
+              v-else-if="screen === 'card' && currentCard && result"
               :card="currentCard"
-              :back-image-url="result?.backImageUrl ?? ''"
+              :back-image-url="result.backImageUrl"
+              :spread="result.spread"
               :index="cardIndex"
+              :total="cardTotal"
               @next="nextCard"
+            />
+            <TarotCrossFinale
+              v-else-if="screen === 'finale' && result && result.spread === 'choice'"
+              :result="result"
+              @reset="reset"
             />
             <TarotScreenFinale
               v-else-if="screen === 'finale' && result"
@@ -80,6 +97,13 @@ const currentCard = computed(() => result.value?.cards[cardIndex.value])
           Ответы приходят тем, кто готов их принять
         </footer>
       </section>
+
+      <DevPreviewBar
+        v-if="isDev"
+        @preview="previewSpread"
+        @finale="goFinale"
+        @reset="reset"
+      />
     </main>
   </MotionConfig>
 </template>

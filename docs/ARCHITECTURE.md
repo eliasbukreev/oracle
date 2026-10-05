@@ -6,7 +6,7 @@
 GitHub Pages (Nuxt, статика)
   │ POST { question }
   ▼
-Cloudflare Worker (валидация → вытягивание 3 карт + положение → промпт с картами и эталонными значениями → OpenRouter → Groq → валидация расклада)
+Cloudflare Worker (валидация → классификация расклада → вытягивание карт + положение → промпт с картами и эталонными значениями → OpenRouter → Groq → валидация расклада)
   │ HTTPS
   ▼
 OpenRouter + Groq (OpenAI-совместимые chat/completions)
@@ -35,12 +35,14 @@ docs/       # документация
 - `app/components/TarotScreenLoading.vue` — экран загрузки: тасующиеся CSS-рубашки, фазовый статус по elapsed, шёпоты по периферии
 - `app/services/loadingWhispers.ts` — фразы-шёпоты, фазовые статусы, споты (чистый модуль с тестами)
 - `app/components/TarotCardScreen.vue` — экран карты (слева карта, справа текст, кнопка под текстом)
-- `app/components/TarotScreenFinale.vue` — итог + миниатюры + «Новый вопрос»
+- `app/components/TarotScreenFinale.vue` — итог + миниатюры рядом + «Новый вопрос» (classic/relations)
+- `app/components/TarotCrossFinale.vue` — финал «Креста выбора»: сетка 3×3 (центр — суть, слева/справа А/Б, сверху/снизу плоды) + названия вариантов из ответа
 - `app/components/TarotCardImage.vue` — картинка карты (рубашка до загрузки, поворот перевёрнутой)
 - `app/components/OracleStatus.vue` — показ ошибки
 - `app/composables/useOracle.ts` — запрос к API: `result / error / isLoading / isBlocked`
 - `app/composables/useTarotFlow.ts` — тонкая Vue-обёртка над машиной экранов
-- `app/services/tarotFlow.ts` — чистая машина `home → loading → card-0 → card-1 → card-2 → finale` (редьюсер, только вперёд)
+- `app/services/tarotFlow.ts` — чистая машина `home → loading → card-0..N → finale` (редьюсер, только вперёд; число карт приходит с ответом)
+- `app/services/tarotPreview.ts` + `app/components/DevPreviewBar.vue` — дев-моки трёх раскладов (только текст, только dev)
 - `app/services/screenMotion.ts` — параметры перехода экранов (fade+slide 0.25с)
 - `app/services/oracleApi.ts` — `POST { question }` на URL воркера (таймаут 40с)
 - `app/types/oracle.ts` — типы ответа и ошибок
@@ -83,10 +85,12 @@ reduced-motion="user"` гасит анимации по системной на�
 src/types.ts               # контракты: TarotResponse/DrawnCard/TarotAskInput, ориентация, OracleProvider, OracleDeps, RateLimiter
 src/oracle.ts              # чистый домен: валидация вопроса
 src/tarot/deck.ts          # каноническая колода: полные 78 карт Райдера-Уэйта (id, имя RU, значения up/rev RU, файл изображения)
-src/tarot/draw.ts          # вытягивание 3 уникальных карт сервером (past/present/future) + монетка положения (upright/reversed)
-src/tarot/prompt.ts        # промт: для каждой карты только эталонное значение выпавшего положения
+src/tarot/spreads.ts        # реестр раскладов classic/relations/choice: позиции, подписи, описания, варианты
+src/tarot/classify.ts       # дешёвый выбор расклада под вопрос (temperature 0, сбой → classic)
+src/tarot/draw.ts          # вытягивание N уникальных карт сервером + монетка положения (upright/reversed)
+src/tarot/prompt.ts        # промт: позиции и рамка из SpreadDef + только эталонное значение выпавшего положения
 src/tarot/validate.ts      # парсинг + строгая сверка id/позиции/положения с вытянутыми
-src/tarot/workflow.ts      # langgraph-like оркестрация: validate → draw → askTarot
+src/tarot/workflow.ts      # langgraph-like оркестрация: validate → classify → draw → askTarot
 src/providers.ts           # фабрика createProvider + общий парсинг конфига
 src/providers/openrouter.ts # OpenRouterProvider (тонкая обёртка)
 src/providers/groq.ts      # GroqProvider (тонкая обёртка)
@@ -119,10 +123,10 @@ src/index.ts               # composition root: Env → конфиги → про
 2. Не-`POST` → `405 { error: "invalid_request" }`. Чужой путь (не `/`) и тело больше 8 КБ (`Content-Length` > 8192) → `400`: мусор отсекается до парсинга и лимита, контракт не меняется.
 3. Штатный Workers Rate Limiting **до** парсинга тела (префлайты не лимитируются): сначала бакет per-IP (`CF-Connecting-IP`, `10` запросов / `60` сек), затем глобальный бакет (`100` запросов / `60` сек, защита квоты LLM). При превышении → `429 { error: "oracle_resting", retry_after: 60 }` + заголовок `Retry-After: 60`. Лимиты задаются в `worker/wrangler.toml` (`[[ratelimits]]`), `period` бывает только `10` или `60`. Лимиты локальны на колокейшн и разрешительные — это защита от bursts, не точный учёт. Без биндингов (локальный `dev`) проверка пропускается.
 4. Парсинг JSON. `question` обязан быть строкой `1..500` символов после `trim()`, иначе `400 { error: "invalid_request" }`.
-4. Workflow расклада (`runTarotWorkflow`): сервер случайно тянет 3 уникальные карты из полной колоды 78 (`crypto.getRandomValues`, позиции `past/present/future`) и монеткой определяет положение каждой (`upright/reversed`) — LLM их только толкует, выбрать свои не может.
-5. Промпт собирается только на бэкенде (русский, мистический стиль, требование вернуть только JSON) и включает для каждой карты `имя (id: slug)`, положение и эталонное значение именно этого положения из классических толкований (переведены на русский, запечены в `deck.ts`) — модель обязана вернуть те же `id`, `position` и `orientation` в том же порядке, а толкование не должно противоречить эталону.
+4. Workflow расклада (`runTarotWorkflow`): дешёвый вызов-классификатор (`tarot/classify.ts`, `temperature 0`, свой таймаут 10с) выбирает расклад из реестра (`classic/relations/choice`, для choice извлекает названия вариантов из вопроса); любой сбой → `classic`. Затем сервер случайно тянет N уникальных карт из полной колоды 78 (`crypto.getRandomValues`, позиции из `spread.positions`) и монеткой определяет положение каждой (`upright/reversed`) — LLM их только толкует, выбрать свои не может. Поле `spread` в запросе игнорируется: контракт API — только `{ question }`.
+5. Промпт собирается только на бэкенде (русский, мистический стиль, требование вернуть только JSON): рамка расклада из `spread.descriptionRu` (для choice — с мягкой рекомендацией сравнить ветви) + для каждой карты `имя (id: slug)`, положение и эталонное значение именно этого положения из классических толкований (переведены на русский, запечены в `deck.ts`) — модель обязана вернуть те же `id`, `position` и `orientation` в том же порядке, а толкование не должно противоречить эталону.
 6. Запрос в primary-провайдер (дефолт OpenRouter: `POST /api/v1/chat/completions`, `response_format: {json_object}`; Groq — тот же протокол), таймаут через `AbortController` (по умолчанию 20с). При пустом ответе primary и включённом fallback — повтор тем же входом (вопрос + те же карты) в secondary.
-7. Ответ модели чистится от ```-обёртки, парсится и валидируется: ровно 3 карты, `id`/`position`/`orientation` строго равны вытянутым, `meaning` и `summary` — непустые строки до 4000 символов; имена в ответ API подставляются из канона колоды, а не из текста модели. Иначе `502 { error: "oracle_unavailable" }`. Явный запрет провайдера (его HTTP `403`) — особый случай: `403 { error: "blocked" }`, VPN-экран вместо «попробуй позже». Остальные 4xx/5xx, сеть, таймаут и битый контент идут в `502`.
+7. Ответ модели чистится от ```-обёртки, парсится и валидируется: число карт равно `spread.cardCount`, `id`/`position`/`orientation` строго равны вытянутым, `meaning` и `summary` — непустые строки до 4000 символов; имена и URL картинок в ответ API подставляются из канона колоды, а не из текста модели; `spread`/`variants` — эхо входа workflow. Иначе `502 { error: "oracle_unavailable" }`. Явный запрет провайдера (его HTTP `403`) — особый случай: `403 { error: "blocked" }`, VPN-экран вместо «попробуй позже». Остальные 4xx/5xx, сеть, таймаут и битый контент идут в `502`.
 7. CORS: заголовок `Access-Control-Allow-Origin` ставится только если `Origin` есть в `CORS_ALLOWED_ORIGINS` (поддерживается `*`). `Access-Control-Allow-Methods`/`-Allow-Headers`/`-Max-Age` (`worker/src/http.ts`) ставятся во все ответы — вне preflight они игнорируются, поэтому отдельной ветки для `OPTIONS` не нужно.
 
 Переменные окружения воркера. Параметры генерации общие для всех
@@ -136,7 +140,7 @@ src/index.ts               # composition root: Env → конфиги → про
 | `GROQ_MODEL` | var | идентификатор модели Groq |
 | `ORACLE_PROVIDER` | var (опц.) | primary-провайдер, дефолт `openrouter` |
 | `ORACLE_FALLBACK_PROVIDER` | var (опц.) | fallback-провайдер, пусто = выключен |
-| `ORACLE_MAX_TOKENS` | var | лимит токенов ответа (для расклада из 3 карт рекомендуется ≥1200) |
+| `ORACLE_MAX_TOKENS` | var | лимит токенов ответа (classic ≥1200, расклады на 5 карт ≥2000) |
 | `ORACLE_TEMPERATURE` | var | температура |
 | `ORACLE_TIMEOUT` | var | таймаут запроса, сек |
 | `CORS_ALLOWED_ORIGINS` | var | список разрешённых origin через запятую |
@@ -173,7 +177,7 @@ Node везде 24: Nuxt 4 требует `^22.19.0 || ^24.11.0 || >=26`, а б�
 
 ## Изображения карт
 
-Картинки живут в R2 за кастомным доменом и раздаются самим Cloudflare — воркер трафиком не нагружается, фронт тянет по 3 картинки на расклад напрямую. Всё в бесплатном тарифе R2 (10 ГБ, 10M чтений/мес).
+Картинки живут в R2 за кастомным доменом и раздаются самим Cloudflare — воркер трафиком не нагружается, фронт тянет картинки напрямую по числу карт расклада. Всё в бесплатном тарифе R2 (10 ГБ, 10M чтений/мес).
 
 - Источник: `temp/Cards-png/*.png` (в репозиторий не коммитится, см. корневой `.gitignore`).
 - Конвертация: `temp/convert-webp.sh` (`cwebp -q 82`) → `temp/webp/tarot/*.webp`, 21 МБ → ~3 МБ. Имена 1-в-1, только расширение `.webp`.

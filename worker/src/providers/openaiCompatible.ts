@@ -1,10 +1,17 @@
 import type {
+  Classification,
   FetchImpl,
   OracleProvider,
   OracleProviderConfig,
   ProviderAnswer,
   TarotAskInput,
 } from "../types";
+import {
+  CLASSIFY_MAX_TOKENS,
+  CLASSIFY_TIMEOUT_MS,
+  classifyPrompt,
+  parseClassification,
+} from "../tarot/classify";
 import { tarotPrompt } from "../tarot/prompt";
 import { parseSpreadResponse } from "../tarot/validate";
 
@@ -172,5 +179,55 @@ export function createOpenAIChatProvider(
     }
   }
 
-  return { name: kind, askTarot };
+  async function classify(question: string): Promise<Classification | null> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(
+      () => controller.abort(),
+      Math.min(timeoutMs, CLASSIFY_TIMEOUT_MS),
+    );
+
+    try {
+      const apiResponse = await fetchImpl(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: "user", content: classifyPrompt(question) }],
+          temperature: 0,
+          max_tokens: CLASSIFY_MAX_TOKENS,
+          response_format: { type: "json_object" },
+        }),
+        signal: controller.signal,
+      });
+
+      if (!apiResponse.ok) {
+        console.error(`${kind}_classify_http_error status=${apiResponse.status}`);
+        return null;
+      }
+
+      const payload = (await apiResponse
+        .json()
+        .catch(() => null)) as ChatCompletionsPayload | null;
+      const content = payload?.choices?.[0]?.message?.content;
+
+      if (typeof content !== "string") {
+        console.error(`${kind}_classify_unreadable`);
+        return null;
+      }
+
+      const result = parseClassification(content);
+      console.log(`${kind}_classify_decided spread=${result.spread.id}`);
+      return result;
+    } catch (error) {
+      console.error(`${kind}_classify_failed ${errorDetail(error)}`);
+      return null;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  return { name: kind, askTarot, classify };
 }

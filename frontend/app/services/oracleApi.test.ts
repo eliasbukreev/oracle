@@ -4,6 +4,7 @@ import { OracleRequestError, askOracle } from "./oracleApi";
 const API_URL = "https://oracle.test/";
 
 const VALID_PAYLOAD = {
+  spread: "classic",
   cards: [
     {
       id: "the-fool",
@@ -106,6 +107,7 @@ describe("askOracle", () => {
 
   it("принимает расклад без картинок (R2 не настроен)", async () => {
     const textOnly = {
+      spread: VALID_PAYLOAD.spread,
       cards: VALID_PAYLOAD.cards.map((c) => ({ ...c, imageUrl: "" })),
       summary: VALID_PAYLOAD.summary,
       backImageUrl: "",
@@ -120,6 +122,48 @@ describe("askOracle", () => {
     mockFetchOnce({ cards: [] });
     const error = (await captureError()) as OracleRequestError;
     expect(error).toBeInstanceOf(OracleRequestError);
+    expect(error.code).toBe("oracle_unavailable");
+  });
+
+  it("принимает расклад на 5 карт", async () => {
+    const five = {
+      spread: "relations",
+      cards: ["self", "other", "attraction", "obstacle", "potential"].map(
+        (position) => ({
+          id: `id-${position}`,
+          name: position,
+          position,
+          orientation: "upright",
+          meaning: "x",
+          imageUrl: "",
+        }),
+      ),
+      summary: "s",
+      backImageUrl: "",
+    };
+    mockFetchOnce(five);
+    const result = await askOracle("Любит ли меня?", API_URL);
+    expect(result.spread).toBe("relations");
+    expect(result.cards).toHaveLength(5);
+  });
+
+  it("принимает choice с вариантами", async () => {
+    mockFetchOnce({
+      ...VALID_PAYLOAD,
+      spread: "choice",
+      variants: { a: "Уйти", b: "Остаться" },
+    });
+    const result = await askOracle("Что выбрать?", API_URL);
+    expect(result.variants).toEqual({ a: "Уйти", b: "Остаться" });
+  });
+
+  it.each([
+    { ...VALID_PAYLOAD, spread: "celtic" },
+    { ...VALID_PAYLOAD, variants: { a: "", b: "x" } },
+    { ...VALID_PAYLOAD, variants: "ab" },
+  ])("бросает oracle_unavailable при битом spread/variants: %s", async (payload) => {
+    mockFetchOnce(payload);
+    const error = (await captureError()) as OracleRequestError;
     expect(error.code).toBe("oracle_unavailable");
   });
 

@@ -49,8 +49,23 @@ function parseRetryAfter(
   return undefined;
 }
 
+function isSpreadId(value: unknown): value is TarotResponse["spread"] {
+  return value === "classic" || value === "relations" || value === "choice";
+}
+
 function isTarotPosition(value: unknown): value is TarotCard["position"] {
-  return value === "past" || value === "present" || value === "future";
+  return typeof value === "string" && value.length > 0;
+}
+
+function isChoiceVariants(value: unknown): value is NonNullable<TarotResponse["variants"]> {
+  if (!value || typeof value !== "object") return false;
+  const variants = value as Record<string, unknown>;
+  return (
+    typeof variants.a === "string" &&
+    variants.a.length > 0 &&
+    typeof variants.b === "string" &&
+    variants.b.length > 0
+  );
 }
 
 function isTarotOrientation(value: unknown): value is TarotOrientation {
@@ -86,12 +101,15 @@ function isTarotResponse(value: unknown): value is TarotResponse {
   const response = value as Record<string, unknown>;
 
   return (
+    isSpreadId(response.spread) &&
     Array.isArray(response.cards) &&
-    response.cards.length === 3 &&
+    response.cards.length >= 1 &&
+    response.cards.length <= 10 &&
     response.cards.every(isTarotCard) &&
     typeof response.summary === "string" &&
     response.summary.length > 0 &&
-    typeof response.backImageUrl === "string"
+    typeof response.backImageUrl === "string" &&
+    (response.variants === undefined || isChoiceVariants(response.variants))
   );
 }
 

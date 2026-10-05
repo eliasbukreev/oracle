@@ -1,34 +1,37 @@
 <script setup lang="ts">
-import type { TarotCard } from "~/types/oracle";
+import type { SpreadId, TarotCard } from "~/types/oracle";
 import {
   TAROT_ORIENTATION_LABELS_RU,
-  TAROT_POSITION_LABELS_RU,
+  positionLabel,
 } from "~/types/oracle";
 
 const props = defineProps<{
   card: TarotCard;
   backImageUrl: string;
-  /** 0..2 */
+  spread: SpreadId;
+  /** 0-based индекс карты */
   index: number;
+  /** Всего карт в раскладе */
+  total: number;
 }>();
 
 const emit = defineEmits<{
   next: [];
 }>();
 
-const isLast = computed(() => props.index >= 2);
+const isLast = computed(() => props.index >= props.total - 1);
 </script>
 
 <template>
-  <div aria-live="polite" :aria-label="`Карта ${index + 1} из 3`">
+  <div aria-live="polite" :aria-label="`Карта ${index + 1} из ${total}`">
     <div class="mb-4 flex items-center justify-between gap-3">
       <span
         class="text-caption font-semibold tracking-overline text-brass uppercase"
-        >Карта {{ index + 1 }} из 3</span
+        >Карта {{ index + 1 }} из {{ total }}</span
       >
       <span class="flex gap-1.5" aria-hidden="true">
         <span
-          v-for="i in 3"
+          v-for="i in total"
           :key="i"
           class="size-1.5"
           :class="i - 1 <= index ? 'bg-brass' : 'bg-brass/25'"
@@ -49,7 +52,7 @@ const isLast = computed(() => props.index >= 2);
         <div
           class="text-caption font-semibold tracking-overline text-brass uppercase"
         >
-          {{ TAROT_POSITION_LABELS_RU[card.position] }}
+          {{ positionLabel(spread, card.position) }}
         </div>
         <div class="font-display my-2 text-display leading-none text-paper">
           {{ card.name }}

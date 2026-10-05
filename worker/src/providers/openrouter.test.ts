@@ -336,3 +336,64 @@ describe("OpenRouterProvider", () => {
     });
   });
 });
+
+describe("OpenRouterProvider classify", () => {
+  it("возвращает классификацию и шлёт дешёвый запрос", async () => {
+    let seenBody = "";
+    const fetchImpl = fakeFetch((_url, init) => {
+      seenBody = String(init?.body);
+      return openRouterOk(
+        JSON.stringify({
+          spread: "choice",
+          variants: { a: "Уволиться", b: "Остаться" },
+        }),
+      );
+    });
+
+    const result = await createOpenRouterProvider(
+      validConfig(),
+      fetchImpl,
+    ).classify("Уволиться или остаться?");
+
+    expect(result?.spread.id).toBe("choice");
+    expect(result?.variants).toEqual({ a: "Уволиться", b: "Остаться" });
+    const body = JSON.parse(seenBody);
+    expect(body.temperature).toBe(0);
+    expect(body.max_tokens).toBeLessThanOrEqual(150);
+    expect(body.messages[0].content).toContain("Уволиться или остаться?");
+  });
+
+  it("null при HTTP-ошибке и сетевом сбое", async () => {
+    const httpFail = createOpenRouterProvider(
+      validConfig(),
+      fakeFetch(() => new Response("{}", { status: 500 })),
+    );
+    await expect(httpFail.classify("Учить ли Rust?")).resolves.toBeNull();
+
+    const netFail = createOpenRouterProvider(
+      validConfig(),
+      vi.fn(async () => {
+        throw new TypeError("network down");
+      }) as unknown as FetchImpl,
+    );
+    await expect(netFail.classify("Учить ли Rust?")).resolves.toBeNull();
+  });
+
+  it("битый контент даёт classic, а не null", async () => {
+    const badJson = createOpenRouterProvider(
+      validConfig(),
+      fakeFetch(() => openRouterOk("не json")),
+    );
+    const result = await badJson.classify("Учить ли Rust?");
+    expect(result?.spread.id).toBe("classic");
+  });
+
+  it("сомнительная классификация даёт classic, а не null", async () => {
+    const provider = createOpenRouterProvider(
+      validConfig(),
+      fakeFetch(() => openRouterOk(JSON.stringify({ spread: "celtic" }))),
+    );
+    const result = await provider.classify("Учить ли Rust?");
+    expect(result?.spread.id).toBe("classic");
+  });
+});

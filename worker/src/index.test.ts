@@ -64,6 +64,30 @@ function promptContent(init?: RequestInit): string {
   }
 }
 
+// Эхо классификатора: всегда classic. Нужно, т.к. теперь каждый флоу
+// делает два вызова (classify + askTarot).
+function echoClassifyResponse(): Response {
+  const payload = {
+    choices: [
+      {
+        message: {
+          role: "assistant",
+          content: JSON.stringify({ spread: "classic" }),
+        },
+      },
+    ],
+  };
+  return new Response(JSON.stringify(payload), { status: 200 });
+}
+
+// Роутер эха:Classify-промт отличается маркером «классификатор вопросов».
+function echoAnyResponse(content: string): Response {
+  if (content.includes("классификатор вопросов")) {
+    return echoClassifyResponse();
+  }
+  return echoSpreadResponse(content);
+}
+
 beforeEach(() => {
   vi.spyOn(console, "log").mockImplementation(() => undefined);
   vi.spyOn(console, "warn").mockImplementation(() => undefined);
@@ -99,7 +123,7 @@ describe("worker fetch", () => {
       "fetch",
       vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
         seenUrl = String(input);
-        return echoSpreadResponse(promptContent(init));
+        return echoAnyResponse(promptContent(init));
       }),
     );
 
@@ -147,7 +171,7 @@ describe("worker fetch", () => {
         const url = String(input);
         seenUrls.push(url);
         if (url.includes("groq")) {
-          return echoSpreadResponse(promptContent(init));
+          return echoAnyResponse(promptContent(init));
         }
         return new Response("{}", { status: 500 });
       }),
@@ -161,9 +185,12 @@ describe("worker fetch", () => {
     expect(res.status).toBe(200);
     const json = (await res.json()) as { cards: unknown[] };
     expect(json.cards).toHaveLength(3);
-    expect(seenUrls).toHaveLength(2);
+    // classify: primary падает → secondary; askTarot: primary падает → secondary.
+    expect(seenUrls).toHaveLength(4);
     expect(seenUrls[0]).toContain("openrouter.ai");
     expect(seenUrls[1]).toContain("groq.com");
+    expect(seenUrls[2]).toContain("openrouter.ai");
+    expect(seenUrls[3]).toContain("groq.com");
   });
 
   it("fallback: при 403 от OpenRouter спрашивает Groq", async () => {
@@ -177,7 +204,7 @@ describe("worker fetch", () => {
         if (!url.includes("groq")) {
           return new Response("forbidden", { status: 403 });
         }
-        return echoSpreadResponse(promptContent(init));
+        return echoAnyResponse(promptContent(init));
       }),
     );
 
@@ -187,7 +214,7 @@ describe("worker fetch", () => {
     );
 
     expect(res.status).toBe(200);
-    expect(seenUrls).toHaveLength(2);
+    expect(seenUrls).toHaveLength(4);
   });
 
   it("запрет обоих провайдеров возвращает 403 blocked", async () => {
@@ -218,14 +245,15 @@ describe("worker fetch", () => {
     const res = await worker.fetch(postRequest(), makeEnv());
 
     expect(res.status).toBe(502);
-    expect(seenUrls).toHaveLength(1);
+    // classify упал, затем askTarot упал — оба у primary.
+    expect(seenUrls).toHaveLength(2);
   });
 
   it("битый fallback-конфиг не ломает primary", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: string | URL | Request, init?: RequestInit) =>
-        echoSpreadResponse(promptContent(init)),
+        echoAnyResponse(promptContent(init)),
       ),
     );
 

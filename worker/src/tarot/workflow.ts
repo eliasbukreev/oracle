@@ -1,9 +1,7 @@
-// Лёгкий langgraph-like workflow расклада: узлы-шаги с общим состоянием.
-// Без внешних зависимостей: validate → draw → askTarot (prompt+call+validate внутри провайдера).
 import { parseQuestion } from "../oracle";
-import type { ChoiceVariants, OracleProvider, TarotResponse } from "../types";
+import type { OracleProvider, TarotResponse } from "../types";
 import { drawSpread } from "./draw";
-import { parseVariants, resolveSpread } from "./spreads";
+import { SPREADS } from "./spreads";
 
 export interface TarotState {
   question: string;
@@ -16,14 +14,6 @@ export type TarotRunResult =
   | { ok: false; blocked: boolean }
   | { ok: false; blocked: false; error: "invalid_request" };
 
-function spreadFromPayload(payload: unknown): ReturnType<typeof resolveSpread> {
-  const id =
-    payload && typeof payload === "object"
-      ? (payload as { spread?: unknown }).spread
-      : undefined;
-  return resolveSpread(id);
-}
-
 export async function runTarotWorkflow(
   payload: unknown,
   state: Omit<TarotState, "question">,
@@ -34,22 +24,17 @@ export async function runTarotWorkflow(
     return { ok: false, blocked: false, error: "invalid_request" };
   }
 
-  const spread = spreadFromPayload(payload);
+  // Узел 2: классификация. Любой сбой → classic, это не ошибка.
+  const classification = await state.provider
+    .classify(question)
+    .catch(() => null);
+  const spread = classification?.spread ?? SPREADS.classic;
+  const variants = classification?.variants;
 
-  // Крест выбора без названий вариантов — invalid_request.
-  let variants: ChoiceVariants | undefined;
-  if (spread.requiresVariants) {
-    const parsed = parseVariants(payload);
-    if (!parsed) {
-      return { ok: false, blocked: false, error: "invalid_request" };
-    }
-    variants = parsed;
-  }
-
-  // Узел 2: вытягивание карт сервером.
+  // Узел 3: вытягивание карт сервером.
   const drawnCards = drawSpread(spread, state.randomFn);
 
-  // Узлы 3-5 (prompt → call → validate) живут внутри провайдера,
+  // Узлы 4-6 (prompt → call → validate) живут внутри провайдера,
   // чтобы fallback мог повторить всю связку тем же входом.
   return state.provider.askTarot({ question, spread, drawnCards, variants });
 }
