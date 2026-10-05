@@ -8,6 +8,7 @@ import {
   drawThreeCards,
 } from "./draw";
 import { tarotPrompt } from "./prompt";
+import { SPREADS } from "./spreads";
 import { isTarotResponse, parseSpreadResponse } from "./validate";
 import { runTarotWorkflow } from "./workflow";
 
@@ -122,7 +123,7 @@ describe("draw", () => {
 
 describe("tarotPrompt", () => {
   it("включает вопрос, все вытянутые id и положения", () => {
-    const prompt = tarotPrompt("Учить ли Rust?", DRAWN);
+    const prompt = tarotPrompt("Учить ли Rust?", DRAWN, SPREADS.classic);
     expect(prompt).toContain("Учить ли Rust?");
     expect(prompt).toContain("the-fool");
     expect(prompt).toContain("the-magician");
@@ -133,7 +134,7 @@ describe("tarotPrompt", () => {
   });
 
   it("даёт только эталонное значение выпавшего положения", () => {
-    const prompt = tarotPrompt("Учить ли Rust?", DRAWN);
+    const prompt = tarotPrompt("Учить ли Rust?", DRAWN, SPREADS.classic);
     const fool = deckCardById("the-fool");
     const magician = deckCardById("the-magician");
     // Шут прямой — его прямое значение есть, перевёрнутого нет.
@@ -147,7 +148,7 @@ describe("tarotPrompt", () => {
 
 describe("parseSpreadResponse", () => {
   it("парсит корректный расклад и берёт имена из канона", () => {
-    const result = parseSpreadResponse(llmJson(), DRAWN);
+    const result = parseSpreadResponse(llmJson(), DRAWN, SPREADS.classic);
     expect(result).toMatchObject({
       cards: [
         {
@@ -184,6 +185,7 @@ describe("parseSpreadResponse", () => {
     const result = parseSpreadResponse(
       llmJson(),
       DRAWN,
+      SPREADS.classic,
       "https://assets.test/",
     );
     expect(result?.cards.map((c) => c.imageUrl)).toEqual([
@@ -198,7 +200,7 @@ describe("parseSpreadResponse", () => {
 
   it("снимает markdown-обёртку", () => {
     expect(
-      parseSpreadResponse(`\`\`\`json\n${llmJson()}\n\`\`\``, DRAWN),
+      parseSpreadResponse(`\`\`\`json\n${llmJson()}\n\`\`\``, DRAWN, SPREADS.classic),
     ).not.toBeNull();
   });
 
@@ -221,7 +223,7 @@ describe("parseSpreadResponse", () => {
       ],
       summary: "s",
     });
-    expect(parseSpreadResponse(bad, DRAWN)).toBeNull();
+    expect(parseSpreadResponse(bad, DRAWN, SPREADS.classic)).toBeNull();
   });
 
   it("отклоняет подмену положения", () => {
@@ -248,7 +250,7 @@ describe("parseSpreadResponse", () => {
       ],
       summary: "s",
     });
-    expect(parseSpreadResponse(bad, DRAWN)).toBeNull();
+    expect(parseSpreadResponse(bad, DRAWN, SPREADS.classic)).toBeNull();
   });
 
   it("отклоняет перестановку позиций", () => {
@@ -275,13 +277,17 @@ describe("parseSpreadResponse", () => {
       ],
       summary: "s",
     });
-    expect(parseSpreadResponse(bad, DRAWN)).toBeNull();
+    expect(parseSpreadResponse(bad, DRAWN, SPREADS.classic)).toBeNull();
   });
 
   it("отклоняет неверное число карт и мусор", () => {
-    expect(parseSpreadResponse("не json", DRAWN)).toBeNull();
+    expect(parseSpreadResponse("не json", DRAWN, SPREADS.classic)).toBeNull();
     expect(
-      parseSpreadResponse(JSON.stringify({ cards: [], summary: "s" }), DRAWN),
+      parseSpreadResponse(
+        JSON.stringify({ cards: [], summary: "s" }),
+        DRAWN,
+        SPREADS.classic,
+      ),
     ).toBeNull();
   });
 });
@@ -290,6 +296,7 @@ describe("isTarotResponse", () => {
   it("принимает корректный ответ API", () => {
     expect(
       isTarotResponse({
+        spread: "classic",
         cards: [
           {
             id: "a",

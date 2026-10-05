@@ -14,6 +14,9 @@ export const SPREADS: Record<SpreadId, SpreadDef> = {
       present: "Настоящее",
       future: "Будущее",
     },
+    descriptionRu:
+      "Классический расклад на три карты: прошлое — настоящее — будущее. " +
+      "Покажи динамику развития ситуации от корней к исходу.",
     requiresVariants: false,
   },
   relations: {
@@ -27,6 +30,10 @@ export const SPREADS: Record<SpreadId, SpreadDef> = {
       obstacle: "Что мешает",
       potential: "Потенциал отношений",
     },
+    descriptionRu:
+      "Расклад на отношения: первые две карты — двое людей, третья — " +
+      "что их связывает, четвёртая — препятствие между ними, пятая — " +
+      "итог и потенциал пары. В выводе оцени отношения в целом.",
     requiresVariants: false,
   },
   choice: {
@@ -40,6 +47,10 @@ export const SPREADS: Record<SpreadId, SpreadDef> = {
       optionB: "Если выбрать вариант Б",
       outcomeB: "Что даст вариант Б",
     },
+    descriptionRu:
+      "Расклад выбора между двумя путями: центральная карта — суть " +
+      "ситуации, ветви А и Б — путь и его плоды. В выводе сравни ветви " +
+      "и укажи, какая выглядит благоприятнее, но решение оставь человеку.",
     requiresVariants: true,
   },
 };

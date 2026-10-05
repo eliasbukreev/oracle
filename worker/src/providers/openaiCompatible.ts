@@ -92,7 +92,7 @@ export function createOpenAIChatProvider(
     config;
 
   async function askTarot(input: TarotAskInput): Promise<ProviderAnswer> {
-    const { question, drawnCards } = input;
+    const { question, spread, drawnCards, variants } = input;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -109,7 +109,12 @@ export function createOpenAIChatProvider(
         },
         body: JSON.stringify({
           model,
-          messages: [{ role: "user", content: tarotPrompt(question, drawnCards) }],
+          messages: [
+            {
+              role: "user",
+              content: tarotPrompt(question, drawnCards, spread, variants),
+            },
+          ],
           temperature,
           max_tokens: maxOutputTokens,
           response_format: { type: "json_object" },
@@ -137,18 +142,28 @@ export function createOpenAIChatProvider(
       }
 
       const content = payload.choices?.[0]?.message?.content;
-      const result =
+      const parsed =
         typeof content === "string"
-          ? parseSpreadResponse(content, drawnCards, imageBaseUrl)
+          ? parseSpreadResponse(content, drawnCards, spread, imageBaseUrl)
           : null;
 
-      if (!result) {
+      if (!parsed) {
         console.error(`${kind}_response_invalid`);
         return { ok: false, blocked: false };
       }
 
       console.log(`${kind}_response_validated`);
-      return { ok: true, response: result };
+      // spread/variants — эхо входа workflow, модель их не возвращает.
+      return {
+        ok: true,
+        response: {
+          spread: spread.id,
+          cards: parsed.cards,
+          summary: parsed.summary,
+          backImageUrl: parsed.backImageUrl,
+          ...(variants ? { variants } : {}),
+        },
+      };
     } catch (error) {
       console.error(`${kind}_request_failed ${errorDetail(error)}`);
       return { ok: false, blocked: false };

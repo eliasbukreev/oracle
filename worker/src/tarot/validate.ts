@@ -1,20 +1,17 @@
 import { MAX_RESPONSE_FIELD_LENGTH } from "../oracle";
 import type {
   DrawnCard,
+  SpreadDef,
+  TarotCard,
   TarotOrientation,
-  TarotPosition,
   TarotResponse,
 } from "../types";
 import { buildTarotCard, tarotBackImageUrl } from "./images";
 
-export const TAROT_POSITIONS: readonly TarotPosition[] = [
-  "past",
-  "present",
-  "future",
-];
-
-function isPosition(value: unknown): value is TarotPosition {
-  return value === "past" || value === "present" || value === "future";
+/** Позиция — непустая строка; принадлежность раскладу проверяет
+ *  parseSpreadResponse сверкой с вытянутыми картами. */
+function isPosition(value: unknown): value is string {
+  return typeof value === "string" && value.length > 0;
 }
 
 function isOrientation(value: unknown): value is TarotOrientation {
@@ -34,7 +31,15 @@ export function isTarotResponse(value: unknown): value is TarotResponse {
 
   const result = value as Record<string, unknown>;
 
-  if (!Array.isArray(result.cards) || result.cards.length !== 3) return false;
+  if (typeof result.spread !== "string" || !result.spread) return false;
+
+  if (
+    !Array.isArray(result.cards) ||
+    result.cards.length < 1 ||
+    result.cards.length > 10
+  ) {
+    return false;
+  }
 
   if (
     typeof result.summary !== "string" ||
@@ -76,13 +81,22 @@ function stripFences(content: string): string {
     .replace(/\s*```$/, "");
 }
 
+/** Разобранный ответ модели без spread/variants: их добавляет вызывающий
+ *  узел из входа workflow (эхо запроса, не ответ модели). */
+export interface ParsedSpread {
+  cards: TarotCard[];
+  summary: string;
+  backImageUrl: string;
+}
+
 /** Парсит сырой ответ модели и сверяет с вытянутыми картами.
  *  Имя и URL картинки берутся из канона (drawnCards + deck), а не из модели. */
 export function parseSpreadResponse(
   content: string,
   expected: DrawnCard[],
+  spread: SpreadDef,
   imageBaseUrl = "",
-): TarotResponse | null {
+): ParsedSpread | null {
   let parsed: unknown;
 
   try {
@@ -103,7 +117,9 @@ export function parseSpreadResponse(
     summary?: unknown;
   };
 
-  if (!Array.isArray(raw.cards) || raw.cards.length !== 3) return null;
+  if (!Array.isArray(raw.cards) || raw.cards.length !== spread.cardCount) {
+    return null;
+  }
   if (
     typeof raw.summary !== "string" ||
     !raw.summary.trim() ||
@@ -112,9 +128,9 @@ export function parseSpreadResponse(
     return null;
   }
 
-  const cards: TarotResponse["cards"] = [];
+  const cards: TarotCard[] = [];
 
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < spread.cardCount; i++) {
     const got = raw.cards[i];
     const want = expected[i];
     if (!got || !want) return null;
@@ -135,8 +151,6 @@ export function parseSpreadResponse(
   }
 
   return {
-    // TODO(шаг 2): spread и variants — из входа workflow, не хардкод.
-    spread: "classic",
     cards,
     summary: (raw.summary as string).trim(),
     backImageUrl: tarotBackImageUrl(imageBaseUrl),

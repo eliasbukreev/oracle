@@ -13,6 +13,8 @@ export interface SpreadDef {
   cardCount: number;
   positions: string[];
   positionLabelsRu: Record<string, string>;
+  /** Рамка расклада для промта: назначение + связь позиций + задача итога. */
+  descriptionRu: string;
   /** Требует ли названия вариантов выбора (только choice). */
   requiresVariants: boolean;
 }

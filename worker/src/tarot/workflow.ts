@@ -1,9 +1,9 @@
 // Лёгкий langgraph-like workflow расклада: узлы-шаги с общим состоянием.
 // Без внешних зависимостей: validate → draw → askTarot (prompt+call+validate внутри провайдера).
 import { parseQuestion } from "../oracle";
-import type { OracleProvider, TarotResponse } from "../types";
-import { drawThreeCards } from "./draw";
-import { SPREADS } from "./spreads";
+import type { ChoiceVariants, OracleProvider, TarotResponse } from "../types";
+import { drawSpread } from "./draw";
+import { parseVariants, resolveSpread } from "./spreads";
 
 export interface TarotState {
   question: string;
@@ -16,6 +16,14 @@ export type TarotRunResult =
   | { ok: false; blocked: boolean }
   | { ok: false; blocked: false; error: "invalid_request" };
 
+function spreadFromPayload(payload: unknown): ReturnType<typeof resolveSpread> {
+  const id =
+    payload && typeof payload === "object"
+      ? (payload as { spread?: unknown }).spread
+      : undefined;
+  return resolveSpread(id);
+}
+
 export async function runTarotWorkflow(
   payload: unknown,
   state: Omit<TarotState, "question">,
@@ -26,15 +34,22 @@ export async function runTarotWorkflow(
     return { ok: false, blocked: false, error: "invalid_request" };
   }
 
+  const spread = spreadFromPayload(payload);
+
+  // Крест выбора без названий вариантов — invalid_request.
+  let variants: ChoiceVariants | undefined;
+  if (spread.requiresVariants) {
+    const parsed = parseVariants(payload);
+    if (!parsed) {
+      return { ok: false, blocked: false, error: "invalid_request" };
+    }
+    variants = parsed;
+  }
+
   // Узел 2: вытягивание карт сервером.
-  const drawnCards = drawThreeCards(state.randomFn);
+  const drawnCards = drawSpread(spread, state.randomFn);
 
   // Узлы 3-5 (prompt → call → validate) живут внутри провайдера,
   // чтобы fallback мог повторить всю связку тем же входом.
-  // TODO(шаг 2): spread из тела запроса + drawSpread + variants для choice.
-  return state.provider.askTarot({
-    question,
-    spread: SPREADS.classic,
-    drawnCards,
-  });
+  return state.provider.askTarot({ question, spread, drawnCards, variants });
 }
