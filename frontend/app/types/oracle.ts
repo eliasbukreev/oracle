@@ -1,7 +1,8 @@
-import type { TarotOrientation } from "@oracle/shared";
+import type { OracleErrorCode, TarotOrientation } from "@oracle/shared";
 
 export type {
   ChoiceVariants,
+  OracleErrorCode,
   SpreadId,
   TarotCard,
   TarotOrientation,
@@ -14,14 +15,6 @@ export const TAROT_ORIENTATION_LABELS_RU: Record<TarotOrientation, string> = {
   upright: "Прямая",
   reversed: "Перевёрнутая",
 };
-
-export type OracleErrorCode =
-  | "invalid_request"
-  | "invalid_client"
-  | "oracle_resting"
-  | "oracle_unavailable"
-  | "internal_error"
-  | "blocked";
 
 export type OracleError = {
   code: OracleErrorCode;

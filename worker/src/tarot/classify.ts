@@ -1,7 +1,12 @@
-// Узел workflow "classify": дешёвый вызов к LLM выбирает расклад
-// под вопрос пользователя. Любой сбой → classic, это не ошибка.
+import { ChoiceVariantsSchema, SpreadIdSchema } from "@oracle/shared";
+import { z } from "zod";
 import type { Classification } from "../types";
-import { parseVariants, resolveSpread, SPREADS } from "./spreads";
+import { resolveSpread, SPREADS } from "./spreads";
+
+const ClassificationPayloadSchema = z.object({
+  spread: z.unknown(),
+  variants: z.unknown().optional(),
+});
 
 export const CLASSIFY_MAX_TOKENS = 150;
 export const CLASSIFY_TIMEOUT_MS = 10_000;
@@ -34,8 +39,6 @@ export function classifyPrompt(question: string): string {
   ].join("\n");
 }
 
-/** Разбирает ответ классификатора. Мусор, choice без вариантов
- *  и всё сомнительное → classic. Никогда не бросает. */
 export function parseClassification(content: string): Classification {
   try {
     const parsed: unknown = JSON.parse(
@@ -44,17 +47,17 @@ export function parseClassification(content: string): Classification {
         .replace(/^```(?:json)?\s*/i, "")
         .replace(/\s*```$/, ""),
     );
-    if (!parsed || typeof parsed !== "object")
-      return { spread: SPREADS.classic };
+    const raw = ClassificationPayloadSchema.safeParse(parsed);
+    if (!raw.success) return { spread: SPREADS.classic };
 
-    const raw = parsed as { spread?: unknown; variants?: unknown };
-    const spread = resolveSpread(raw.spread);
+    const spreadId = SpreadIdSchema.safeParse(raw.data.spread);
+    const spread = resolveSpread(spreadId.success ? spreadId.data : undefined);
 
     if (!spread.requiresVariants) return { spread };
 
-    const variants = parseVariants({ variants: raw.variants });
-    if (!variants) return { spread: SPREADS.classic };
-    return { spread, variants };
+    const variants = ChoiceVariantsSchema.safeParse(raw.data.variants);
+    if (!variants.success) return { spread: SPREADS.classic };
+    return { spread, variants: variants.data };
   } catch {
     return { spread: SPREADS.classic };
   }

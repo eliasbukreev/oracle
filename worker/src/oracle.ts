@@ -1,21 +1,10 @@
-export const MAX_QUESTION_LENGTH = 500;
-export const MAX_RESPONSE_FIELD_LENGTH = 4000;
+import { AskRequestSchema } from "@oracle/shared";
+
+// Реэкспорт для тестов, канон лимитов — в shared.
+export { MAX_QUESTION_LENGTH } from "@oracle/shared";
 
 export function parseQuestion(payload: unknown): string | null {
-  const question =
-    payload && typeof payload === "object" && "question" in payload
-      ? (payload as { question?: unknown }).question
-      : undefined;
-
-  if (typeof question !== "string") {
-    return null;
-  }
-
-  const trimmed = question.trim();
-
-  if (!trimmed || trimmed.length > MAX_QUESTION_LENGTH) {
-    return null;
-  }
-
-  return trimmed;
+  if (!payload || typeof payload !== "object") return null;
+  const parsed = AskRequestSchema.safeParse(payload);
+  return parsed.success ? parsed.data.question : null;
 }

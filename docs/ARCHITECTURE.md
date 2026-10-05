@@ -17,7 +17,7 @@ OpenRouter + Groq (OpenAI-совместимые chat/completions)
 ```text
 frontend/   # Nuxt 4 + Vue, статический сайт для GitHub Pages
 worker/     # Cloudflare Worker (API), TypeScript
-shared/     # общий контракт API: типы + подписи позиций (без рантайма)
+shared/     # общий контракт API: zod-схемы + типы + подписи позиций
 docs/       # документация
 .github/workflows/deploy.yml  # CI/CD: worker + frontend + Pages
 ```
@@ -27,12 +27,16 @@ docs/       # документация
 ## Shared `shared/`
 
 Пакет `@oracle/shared` (`file:../shared` в обоих `package.json`):
-типы контракта (`SpreadId`, `TarotCard`, `TarotResponse`, …) и таблица
-русских подписей позиций + `positionLabel()`. Правил два:
+zod-схемы контракта (`SpreadIdSchema`, `TarotCardSchema`,
+`TarotResponseSchema`, `AskRequestSchema`, `OracleErrorCodeSchema`, …),
+типы как `z.infer` от них, лимиты (`limits.ts`) и таблица русских
+подписей позиций + `positionLabel()`. Правил три:
 
-1. Контракт правится **только здесь** — воркер и фронт реэкспортируют,
-   копипаста типов и подписей в пакетах быть не должно.
-2. Изменения обратно совместимые (только добавление): деплои воркера
+1. Контракт правится **только здесь** — схема первична, тип выводится;
+   копипаста типов, схем и подписей в пакетах быть не должно.
+2. Валидация контрактов — только схемами (`safeParse`); доменная логика
+   (сверка с вытянутыми, фолбэк на classic) остаётся рукописной рядом.
+3. Изменения обратно совместимые (только добавление): деплои воркера
    и фронта идут раздельно, фронт толерантен (1–10 карт, пустые URL).
 
 ## Frontend `frontend/`

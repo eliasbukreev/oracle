@@ -1,9 +1,8 @@
-import type {
-  OracleErrorCode,
-  TarotCard,
-  TarotOrientation,
-  TarotResponse,
-} from "~/types/oracle";
+import {
+  OracleErrorCodeSchema,
+  TarotResponseSchema,
+} from "@oracle/shared";
+import type { OracleErrorCode, TarotResponse } from "~/types/oracle";
 
 const ASK_TIMEOUT_MS = 40000;
 
@@ -49,89 +48,12 @@ function parseRetryAfter(
   return undefined;
 }
 
-const KNOWN_SPREADS: ReadonlyArray<TarotResponse["spread"]> = [
-  "classic",
-  "relations",
-  "choice",
-  "yesno",
-  "diagnose",
-  "period",
-  "daily",
-];
-
-function isSpreadId(value: unknown): value is TarotResponse["spread"] {
-  return (KNOWN_SPREADS as ReadonlyArray<unknown>).includes(value);
-}
-
-function isTarotPosition(value: unknown): value is TarotCard["position"] {
-  return typeof value === "string" && value.length > 0;
-}
-
-function isChoiceVariants(value: unknown): value is NonNullable<TarotResponse["variants"]> {
-  if (!value || typeof value !== "object") return false;
-  const variants = value as Record<string, unknown>;
-  return (
-    typeof variants.a === "string" &&
-    variants.a.length > 0 &&
-    typeof variants.b === "string" &&
-    variants.b.length > 0
-  );
-}
-
-function isTarotOrientation(value: unknown): value is TarotOrientation {
-  return value === "upright" || value === "reversed";
-}
-
-function isTarotCard(value: unknown): value is TarotCard {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-
-  const card = value as Record<string, unknown>;
-
-  return (
-    typeof card.id === "string" &&
-    card.id.length > 0 &&
-    typeof card.name === "string" &&
-    card.name.length > 0 &&
-    isTarotPosition(card.position) &&
-    isTarotOrientation(card.orientation) &&
-    typeof card.meaning === "string" &&
-    card.meaning.length > 0 &&
-    // Пустая строка допустима: R2 может быть не настроен, тогда только текст.
-    typeof card.imageUrl === "string"
-  );
-}
-
 function isTarotResponse(value: unknown): value is TarotResponse {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-
-  const response = value as Record<string, unknown>;
-
-  return (
-    isSpreadId(response.spread) &&
-    Array.isArray(response.cards) &&
-    response.cards.length >= 1 &&
-    response.cards.length <= 10 &&
-    response.cards.every(isTarotCard) &&
-    typeof response.summary === "string" &&
-    response.summary.length > 0 &&
-    typeof response.backImageUrl === "string" &&
-    (response.variants === undefined || isChoiceVariants(response.variants))
-  );
+  return TarotResponseSchema.safeParse(value).success;
 }
 
 function isOracleErrorCode(value: unknown): value is OracleErrorCode {
-  return (
-    value === "invalid_request" ||
-    value === "invalid_client" ||
-    value === "oracle_resting" ||
-    value === "oracle_unavailable" ||
-    value === "internal_error" ||
-    value === "blocked"
-  );
+  return OracleErrorCodeSchema.safeParse(value).success;
 }
 
 function errorCodeFromStatus(status: number): OracleErrorCode {

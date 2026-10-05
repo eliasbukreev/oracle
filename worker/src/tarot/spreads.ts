@@ -1,9 +1,11 @@
-// Реестр раскладов: сколько карт, какие позиции, нужны ли варианты выбора.
-// Промт/валидация/фронт строятся от этого реестра, а не от захардкоженной тройки.
-import { SPREAD_POSITION_LABELS_RU } from "@oracle/shared";
+import {
+  ChoiceVariantsSchema,
+  SPREAD_POSITION_LABELS_RU,
+} from "@oracle/shared";
 import type { ChoiceVariants, SpreadDef, SpreadId } from "../types";
 
-export const MAX_VARIANT_LENGTH = 100;
+// Реэкспорт для тестов, канон лимитов — в shared.
+export { MAX_VARIANT_LENGTH } from "@oracle/shared";
 
 export const SPREADS: Record<SpreadId, SpreadDef> = {
   classic: {
@@ -102,16 +104,6 @@ export function parseVariants(payload: unknown): ChoiceVariants | null {
   if (!payload || typeof payload !== "object") return null;
 
   const raw = (payload as { variants?: unknown }).variants;
-  if (!raw || typeof raw !== "object") return null;
-
-  const record = raw as Record<string, unknown>;
-  const a = typeof record.a === "string" ? record.a.trim() : "";
-  const b = typeof record.b === "string" ? record.b.trim() : "";
-
-  if (!a || !b) return null;
-  if (a.length > MAX_VARIANT_LENGTH || b.length > MAX_VARIANT_LENGTH) {
-    return null;
-  }
-
-  return { a, b };
+  const parsed = ChoiceVariantsSchema.safeParse(raw);
+  return parsed.success ? parsed.data : null;
 }

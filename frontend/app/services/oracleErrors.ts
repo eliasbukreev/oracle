@@ -1,5 +1,6 @@
 // Чистые хелперы для текстов ошибок API. Без зависимостей от Nuxt/Vue,
 // поэтому покрываются обычными unit-тестами (vitest, node-окружение).
+import { OracleErrorCodeSchema } from "@oracle/shared";
 import type { OracleErrorCode } from "~/types/oracle";
 
 export const errorMessages: Record<
@@ -16,19 +17,9 @@ export const errorMessages: Record<
     "Похоже, что-то глушит связь между тобой и Оракулом — такое бывает без VPN. Включи его и спроси снова.",
 };
 
-export const knownCodes: OracleErrorCode[] = [
-  "invalid_request",
-  "invalid_client",
-  "oracle_resting",
-  "oracle_unavailable",
-  "internal_error",
-  "blocked",
-];
-
 export function toErrorCode(value: unknown): OracleErrorCode {
-  return typeof value === "string" && (knownCodes as string[]).includes(value)
-    ? (value as OracleErrorCode)
-    : "internal_error";
+  const parsed = OracleErrorCodeSchema.safeParse(value);
+  return parsed.success ? parsed.data : "internal_error";
 }
 
 export function pluralize(
