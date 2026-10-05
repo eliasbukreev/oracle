@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { motion } from "motion-v";
 import backUrl from "~/assets/img/CardBacks.webp?url";
-import { PREVIEWS } from "~/services/tarotPreview";
-import type { SpreadId } from "~/types/oracle";
 import { SCREEN_TRANSITION } from "~/services/screenMotion";
 
 // Рубашка предзагружается со стартом: к экрану карты уже в кэше, мигания нет.
@@ -24,18 +22,11 @@ const {
   ask,
   nextCard,
   reset,
-  preview,
-  goFinale,
 } = useTarotFlow()
 
-const isDev = import.meta.dev;
 const isWideScreen = computed(() => screen.value === 'card' || screen.value === 'finale')
 const currentCard = computed(() => result.value?.cards[cardIndex.value])
 const cardTotal = computed(() => result.value?.cards.length ?? 0)
-
-function previewSpread(spread: SpreadId) {
-  preview(PREVIEWS[spread]);
-}
 </script>
 
 <template>
@@ -97,13 +88,6 @@ function previewSpread(spread: SpreadId) {
           Ответы приходят тем, кто готов их принять
         </footer>
       </section>
-
-      <DevPreviewBar
-        v-if="isDev"
-        @preview="previewSpread"
-        @finale="goFinale"
-        @reset="reset"
-      />
     </main>
   </MotionConfig>
 </template>

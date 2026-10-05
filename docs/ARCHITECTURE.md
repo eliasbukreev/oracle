@@ -42,7 +42,7 @@ docs/       # документация
 - `app/composables/useOracle.ts` — запрос к API: `result / error / isLoading / isBlocked`
 - `app/composables/useTarotFlow.ts` — тонкая Vue-обёртка над машиной экранов
 - `app/services/tarotFlow.ts` — чистая машина `home → loading → card-0..N → finale` (редьюсер, только вперёд; число карт приходит с ответом)
-- `app/services/tarotPreview.ts` + `app/components/DevPreviewBar.vue` — дев-моки трёх раскладов (только текст, только dev)
+- Дев-превью экранов удалено сознательно: превью сливалось с прод-средой, смотрим состояния живым бэкендом
 - `app/services/screenMotion.ts` — параметры перехода экранов (fade+slide 0.25с)
 - `app/services/oracleApi.ts` — `POST { question }` на URL воркера (таймаут 40с)
 - `app/types/oracle.ts` — типы ответа и ошибок

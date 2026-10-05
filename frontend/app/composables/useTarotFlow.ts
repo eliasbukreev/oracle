@@ -1,5 +1,4 @@
 import { useOracle } from "~/composables/useOracle";
-import type { TarotResponse } from "~/types/oracle";
 import {
   INITIAL_FLOW_STATE,
   reduceFlow,
@@ -47,23 +46,6 @@ export function useTarotFlow() {
     send({ type: "reset" });
   }
 
-  /** Дев-превью: подложить готовый расклад без бэкенда. */
-  function preview(result: TarotResponse) {
-    oracle.result.value = result;
-    oracle.error.value = null;
-    screen.value = "card";
-    cardIndex.value = 0;
-    cardCount.value = result.cards.length;
-  }
-
-  /** Дев-превью: прыгнуть сразу в финал текущего расклада. */
-  function goFinale() {
-    if (!oracle.result.value) return;
-    cardCount.value = oracle.result.value.cards.length;
-    cardIndex.value = cardCount.value - 1;
-    screen.value = "finale";
-  }
-
   const screenKey = computed(
     () => `${screen.value}-${cardIndex.value}-${cardCount.value}`,
   );
@@ -77,7 +59,5 @@ export function useTarotFlow() {
     ask,
     nextCard,
     reset,
-    preview,
-    goFinale,
   };
 }
