@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@oracle/shared": "file:../shared"
+    "@oracle/shared": "file:../shared",
+    "zod": "^4.6.5"
   },
   "scripts": {
     "check": "tsc --noEmit",

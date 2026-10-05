@@ -15,15 +15,16 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@oracle/shared": "file:../shared",
     "@nuxt/fonts": "^0.14.0",
     "@nuxt/icon": "^2.5.1",
+    "@oracle/shared": "file:../shared",
     "@tailwindcss/vite": "^4.3.3",
     "@vueuse/nuxt": "^15.0.0",
     "motion-v": "^2.5.2",
     "nuxt": "^4.5.2",
     "tailwindcss": "^4.3.3",
-    "vue": "^3.5.13"
+    "vue": "^3.5.13",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@iconify-json/game-icons": "^1.2.4",

@@ -2,15 +2,20 @@
   "name": "@oracle/shared",
   "version": "0.1.0",
   "private": true,
-  "description": "Общий контракт API Оракула: типы + таблицы подписей. Без рантайма и зависимостей.",
+  "description": "Общий контракт API Оракула: zod-схемы (схема первична, типы выводятся) + таблицы подписей.",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
   },
   "scripts": {
-    "check": "tsc --noEmit"
+    "check": "tsc --noEmit",
+    "test": "vitest run"
   },
   "devDependencies": {
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "vitest": "^5.0.3"
+  },
+  "dependencies": {
+    "zod": "^4.6.5"
   }
 }
