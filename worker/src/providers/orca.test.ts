@@ -34,6 +34,7 @@ describe("OrcaProvider", () => {
     expect(result).toEqual({
       ok: true,
       response: {
+        spread: "classic",
         cards: [
           {
             id: "the-fool",
@@ -149,5 +150,36 @@ describe("OrcaProvider", () => {
       ok: true,
       response: expect.objectContaining({ summary: expect.any(String) }),
     });
+  });
+});
+
+describe("OrcaProvider classify", () => {
+  it("ходит в api.orcarouter.ai и возвращает классификацию", async () => {
+    let seenUrl = "";
+    let seenBody = "";
+    const fetchImpl = fakeFetch((url, init) => {
+      seenUrl = url;
+      seenBody = String(init?.body);
+      return orcaOk(JSON.stringify({ spread: "relations" }));
+    });
+
+    const result = await createOrcaProvider(
+      validConfig(),
+      fetchImpl,
+    ).classify("Любит ли меня?");
+
+    expect(result?.spread.id).toBe("relations");
+    expect(seenUrl).toBe("https://api.orcarouter.ai/v1/chat/completions");
+    const body = JSON.parse(seenBody);
+    expect(body.temperature).toBe(0);
+    expect(body.max_tokens).toBeLessThanOrEqual(150);
+  });
+
+  it("null при HTTP-ошибке", async () => {
+    const provider = createOrcaProvider(
+      validConfig(),
+      fakeFetch(() => new Response("{}", { status: 500 })),
+    );
+    await expect(provider.classify("Учить ли Rust?")).resolves.toBeNull();
   });
 });

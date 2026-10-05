@@ -276,15 +276,17 @@ describe("worker fetch", () => {
       "fetch",
       vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
         seenUrls.push(String(input));
-        return echoSpreadResponse(promptContent(init));
+        return echoAnyResponse(promptContent(init));
       }),
     );
 
     const res = await worker.fetch(postRequest(), makeEnv({ ORACLE_PROVIDER: "orca" }));
 
     expect(res.status).toBe(200);
-    expect(seenUrls).toHaveLength(1);
+    // classify + askTarot — оба у primary.
+    expect(seenUrls).toHaveLength(2);
     expect(seenUrls[0]).toBe("https://api.orcarouter.ai/v1/chat/completions");
+    expect(seenUrls[1]).toBe("https://api.orcarouter.ai/v1/chat/completions");
   });
 
   it("fallback: при 500 от Orca спрашивает OpenRouter", async () => {
@@ -297,7 +299,7 @@ describe("worker fetch", () => {
         if (url.includes("orcarouter")) {
           return new Response("{}", { status: 500 });
         }
-        return echoSpreadResponse(promptContent(init));
+        return echoAnyResponse(promptContent(init));
       }),
     );
 
@@ -312,7 +314,11 @@ describe("worker fetch", () => {
     expect(res.status).toBe(200);
     const json = (await res.json()) as { cards: unknown[] };
     expect(json.cards).toHaveLength(3);
+    // classify: primary падает → secondary; askTarot: primary падает → secondary.
+    expect(seenUrls).toHaveLength(4);
     expect(seenUrls[0]).toContain("orcarouter");
     expect(seenUrls[1]).toContain("openrouter.ai");
+    expect(seenUrls[2]).toContain("orcarouter");
+    expect(seenUrls[3]).toContain("openrouter.ai");
   });
 });
