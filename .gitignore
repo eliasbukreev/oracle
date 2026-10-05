@@ -2,3 +2,4 @@
 /.playwright-mcp
 /temp
 /worker/.DS_Store
+/shared/node_modules

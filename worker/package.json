@@ -2,6 +2,9 @@
   "name": "oracle-worker",
   "private": true,
   "type": "module",
+  "dependencies": {
+    "@oracle/shared": "file:../shared"
+  },
   "scripts": {
     "check": "tsc --noEmit",
     "lint": "eslint .",
