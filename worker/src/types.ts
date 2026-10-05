@@ -2,7 +2,14 @@
 // Модуль ничего не знает про Cloudflare, Request/Response и Env.
 
 /** Идентификатор расклада. */
-export type SpreadId = "classic" | "relations" | "choice";
+export type SpreadId =
+  | "classic"
+  | "relations"
+  | "choice"
+  | "yesno"
+  | "diagnose"
+  | "period"
+  | "daily";
 
 export type TarotPosition = string;
 

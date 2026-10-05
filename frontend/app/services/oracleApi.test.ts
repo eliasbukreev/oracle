@@ -147,6 +147,28 @@ describe("askOracle", () => {
     expect(result.cards).toHaveLength(5);
   });
 
+  it("принимает daily из одной карты", async () => {
+    const one = {
+      spread: "daily",
+      cards: [
+        {
+          id: "id-focus",
+          name: "focus",
+          position: "focus",
+          orientation: "upright",
+          meaning: "x",
+          imageUrl: "",
+        },
+      ],
+      summary: "s",
+      backImageUrl: "",
+    };
+    mockFetchOnce(one);
+    const result = await askOracle("Что важно сегодня?", API_URL);
+    expect(result.spread).toBe("daily");
+    expect(result.cards).toHaveLength(1);
+  });
+
   it("принимает choice с вариантами", async () => {
     mockFetchOnce({
       ...VALID_PAYLOAD,

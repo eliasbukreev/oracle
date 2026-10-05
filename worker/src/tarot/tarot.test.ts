@@ -545,6 +545,39 @@ describe("runTarotWorkflow", () => {
     expect((seen as { drawnCards: DrawnCard[] }).drawnCards).toHaveLength(5);
   });
 
+  it("daily: классификатор выбирает расклад, тянется 1 карта", async () => {
+    let seen: unknown;
+    const provider = {
+      name: "stub",
+      classify: async () => ({ spread: SPREADS.daily }),
+      askTarot: async (input: {
+        spread: { id: string };
+        drawnCards: DrawnCard[];
+      }) => {
+        seen = input;
+        return {
+          ok: true as const,
+          response: {
+            spread: "daily" as const,
+            cards: [],
+            summary: "ok",
+            backImageUrl: "",
+          },
+        };
+      },
+    };
+    const result = await runTarotWorkflow(
+      { question: "Что важно сегодня?" },
+      { provider, randomFn: () => 0 },
+    );
+    expect(result.ok).toBe(true);
+    expect(seen).toMatchObject({ spread: { id: "daily" } });
+    expect((seen as { drawnCards: DrawnCard[] }).drawnCards).toHaveLength(1);
+    expect(
+      (seen as { drawnCards: DrawnCard[] }).drawnCards.map((c) => c.position),
+    ).toEqual(["focus"]);
+  });
+
   it("поле spread в запросе игнорируется: решает классификатор", async () => {
     let seen: unknown;
     const provider = {
@@ -675,7 +708,36 @@ describe("classify", () => {
     expect(prompt).toContain("classic");
     expect(prompt).toContain("relations");
     expect(prompt).toContain("choice");
+    expect(prompt).toContain("yesno");
+    expect(prompt).toContain("diagnose");
+    expect(prompt).toContain("period");
+    expect(prompt).toContain("daily");
     expect(prompt).toContain("JSON");
+  });
+
+  it("разбирает новые расклады без вариантов", () => {
+    for (const id of ["yesno", "diagnose", "period", "daily"] as const) {
+      expect(parseClassification(JSON.stringify({ spread: id }))).toEqual({
+        spread: SPREADS[id],
+      });
+    }
+  });
+
+  it("промт daily парсится в одну карту", () => {
+    const prompt = tarotPrompt(
+      "Что важно сегодня?",
+      [
+        {
+          id: "the-sun",
+          name: "Солнце",
+          position: "focus",
+          orientation: "upright",
+        },
+      ],
+      SPREADS.daily,
+    );
+    expect(prompt).toContain("ровно 1 элемента");
+    expect(prompt).toContain(SPREADS.daily.descriptionRu);
   });
 
   it("разбирает choice с вариантами", () => {

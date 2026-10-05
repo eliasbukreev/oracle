@@ -14,12 +14,17 @@ export function classifyPrompt(question: string): string {
   return [
     "Ты — классификатор вопросов для таро-раскладов. Отвечай только JSON.",
     "Выбери расклад, который лучше всего подходит под вопрос пользователя.",
-    "Если вопрос про выбор между двумя вариантами и оба различимы — choice,",
+    "Если вопрос про выбор между двумя различимыми вариантами — choice,",
     "и извлеки названия вариантов дословно из вопроса.",
     "Если два варианта неразличимы — не выбирай choice.",
-    "Если вопрос про отношения — relations. Во всех остальных случаях — classic.",
+    "Если вопрос требует решения да или нет — yesno.",
+    "Если вопрос широкий, про понимание ситуации («Помоги мне разобраться») — diagnose.",
+    "Если вопрос про неделю, месяц или год — period.",
+    "Если вопрос про сегодня или завтра — daily.",
+    "Если вопрос про динамику пары и отношения двоих — relations.",
+    "Во всех остальных случаях — classic.",
     "Верни только валидный JSON без markdown и без ```.",
-    "Формат: {spread: classic|relations|choice, variants?: {a, b}}.",
+    "Формат: {spread: classic|relations|choice|yesno|diagnose|period|daily, variants?: {a, b}}.",
     "Поле variants — только для choice, обе строки непустые.",
     "",
     "Расклады:",
@@ -39,7 +44,8 @@ export function parseClassification(content: string): Classification {
         .replace(/^```(?:json)?\s*/i, "")
         .replace(/\s*```$/, ""),
     );
-    if (!parsed || typeof parsed !== "object") return { spread: SPREADS.classic };
+    if (!parsed || typeof parsed !== "object")
+      return { spread: SPREADS.classic };
 
     const raw = parsed as { spread?: unknown; variants?: unknown };
     const spread = resolveSpread(raw.spread);

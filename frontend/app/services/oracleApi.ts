@@ -49,8 +49,18 @@ function parseRetryAfter(
   return undefined;
 }
 
+const KNOWN_SPREADS: ReadonlyArray<TarotResponse["spread"]> = [
+  "classic",
+  "relations",
+  "choice",
+  "yesno",
+  "diagnose",
+  "period",
+  "daily",
+];
+
 function isSpreadId(value: unknown): value is TarotResponse["spread"] {
-  return value === "classic" || value === "relations" || value === "choice";
+  return (KNOWN_SPREADS as ReadonlyArray<unknown>).includes(value);
 }
 
 function isTarotPosition(value: unknown): value is TarotCard["position"] {

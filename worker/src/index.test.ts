@@ -33,7 +33,7 @@ function postRequest(): Request {
 function echoSpreadResponse(content: string): Response {
   const triples = [
     ...String(content).matchAll(
-      /\[(past|present|future)[^\]]*\] [^(]*\(id: ([a-z-]+)\), положение: (ПРЯМАЯ|ПЕРЕВЁРНУТАЯ)/g,
+      /\[([a-zA-Z]+)[^\]]*\] [^(]*\(id: ([a-z-]+)\), положение: (ПРЯМАЯ|ПЕРЕВЁРНУТАЯ)/g,
     ),
   ];
   const cards = triples.map((m) => ({

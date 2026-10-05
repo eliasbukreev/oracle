@@ -7,11 +7,15 @@ import {
 } from "./spreads";
 
 describe("SPREADS", () => {
-  it("реестр содержит три расклада", () => {
+  it("реестр содержит семь раскладов", () => {
     expect(Object.keys(SPREADS).sort()).toEqual([
       "choice",
       "classic",
+      "daily",
+      "diagnose",
+      "period",
       "relations",
+      "yesno",
     ]);
   });
 
@@ -31,7 +35,21 @@ describe("SPREADS", () => {
   it("только choice требует варианты", () => {
     expect(SPREADS.classic.requiresVariants).toBe(false);
     expect(SPREADS.relations.requiresVariants).toBe(false);
+    expect(SPREADS.yesno.requiresVariants).toBe(false);
+    expect(SPREADS.diagnose.requiresVariants).toBe(false);
+    expect(SPREADS.period.requiresVariants).toBe(false);
+    expect(SPREADS.daily.requiresVariants).toBe(false);
     expect(SPREADS.choice.requiresVariants).toBe(true);
+  });
+
+  it("число карт: daily 1, classic и yesno 3, остальные 5", () => {
+    expect(SPREADS.daily.cardCount).toBe(1);
+    expect(SPREADS.classic.cardCount).toBe(3);
+    expect(SPREADS.yesno.cardCount).toBe(3);
+    expect(SPREADS.relations.cardCount).toBe(5);
+    expect(SPREADS.choice.cardCount).toBe(5);
+    expect(SPREADS.diagnose.cardCount).toBe(5);
+    expect(SPREADS.period.cardCount).toBe(5);
   });
 });
 
@@ -40,6 +58,10 @@ describe("resolveSpread", () => {
     expect(resolveSpread("relations")).toBe(SPREADS.relations);
     expect(resolveSpread("choice")).toBe(SPREADS.choice);
     expect(resolveSpread("classic")).toBe(SPREADS.classic);
+    expect(resolveSpread("yesno")).toBe(SPREADS.yesno);
+    expect(resolveSpread("diagnose")).toBe(SPREADS.diagnose);
+    expect(resolveSpread("period")).toBe(SPREADS.period);
+    expect(resolveSpread("daily")).toBe(SPREADS.daily);
   });
 
   it("неизвестное и пустое даёт classic, а не ошибку", () => {

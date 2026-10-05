@@ -53,11 +53,79 @@ export const SPREADS: Record<SpreadId, SpreadDef> = {
       "и укажи, какая выглядит благоприятнее, но решение оставь человеку.",
     requiresVariants: true,
   },
+  yesno: {
+    id: "yesno",
+    cardCount: 3,
+    positions: ["pro", "con", "outcome"],
+    positionLabelsRu: {
+      pro: "Что говорит «за»",
+      con: "Что говорит «против»",
+      outcome: "Вероятный результат",
+    },
+    descriptionRu:
+      "Расклад для конкретного решения. Первая карта — что работает " +
+      "в пользу, вторая — препятствие и риск, третья — к чему движется " +
+      "ситуация при нынешних обстоятельствах. Не назначай картам " +
+      "механические «да» и «нет»: взвесь соотношение и содержание " +
+      "третьей позиции и сведи итог к склонению, а не к вердикту.",
+    requiresVariants: false,
+  },
+  diagnose: {
+    id: "diagnose",
+    cardCount: 5,
+    positions: ["reality", "blindspot", "block", "resource", "trend"],
+    positionLabelsRu: {
+      reality: "Что происходит на самом деле",
+      blindspot: "Чего я не вижу",
+      block: "Что мешает",
+      resource: "Что может помочь",
+      trend: "К чему ведёт ситуация",
+    },
+    descriptionRu:
+      "Диагностический расклад, а не предсказательный. Первая карта — " +
+      "основная динамика, а не фасад. Пятая — не неизбежный финал, " +
+      "а тренд при сохранении текущей динамики: формулируй как " +
+      "«если ничего не менять». Ресурсом может быть и жёсткая карта.",
+    requiresVariants: false,
+  },
+  period: {
+    id: "period",
+    cardCount: 5,
+    positions: ["energy", "work", "love", "trial", "advice"],
+    positionLabelsRu: {
+      energy: "Общая энергия периода",
+      work: "Работа и деньги",
+      love: "Отношения",
+      trial: "Главное испытание",
+      advice: "Совет",
+    },
+    descriptionRu:
+      "Периодический обзор. Определи период из вопроса: неделя, месяц " +
+      "или год; если не указан — толкуй нейтрально ко всем трём. " +
+      "Пятая позиция важнее остальных: это практический ориентир, " +
+      "а не прогноз. Испытание — не обязательно беда.",
+    requiresVariants: false,
+  },
+  daily: {
+    id: "daily",
+    cardCount: 1,
+    positions: ["focus"],
+    positionLabelsRu: {
+      focus: "На что обратить внимание",
+    },
+    descriptionRu:
+      "Одна карта-ориентир на день. Определи из вопроса: сегодня или " +
+      "завтра. Не превращай карту в конкретное предсказание события: " +
+      "дай настрой и фокус внимания на день.",
+    requiresVariants: false,
+  },
 };
 
 /** Неизвестный id → дефолтный classic (не ошибка, как с lang). */
 export function resolveSpread(id: unknown): SpreadDef {
-  if (id === "relations" || id === "choice") return SPREADS[id];
+  if (typeof id === "string" && id in SPREADS) {
+    return SPREADS[id as SpreadId];
+  }
   return SPREADS.classic;
 }
 

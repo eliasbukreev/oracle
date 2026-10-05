@@ -2,7 +2,14 @@ export type TarotPosition = string
 
 export type TarotOrientation = 'upright' | 'reversed'
 
-export type SpreadId = 'classic' | 'relations' | 'choice'
+export type SpreadId =
+  | 'classic'
+  | 'relations'
+  | 'choice'
+  | 'yesno'
+  | 'diagnose'
+  | 'period'
+  | 'daily'
 
 export type ChoiceVariants = {
   a: string
@@ -51,6 +58,28 @@ export const SPREAD_POSITION_LABELS_RU: Record<SpreadId, Record<string, string>>
     outcomeA: 'Что даст вариант А',
     optionB: 'Если выбрать вариант Б',
     outcomeB: 'Что даст вариант Б',
+  },
+  yesno: {
+    pro: 'Что говорит «за»',
+    con: 'Что говорит «против»',
+    outcome: 'Вероятный результат',
+  },
+  diagnose: {
+    reality: 'Что происходит на самом деле',
+    blindspot: 'Чего я не вижу',
+    block: 'Что мешает',
+    resource: 'Что может помочь',
+    trend: 'К чему ведёт ситуация',
+  },
+  period: {
+    energy: 'Общая энергия периода',
+    work: 'Работа и деньги',
+    love: 'Отношения',
+    trial: 'Главное испытание',
+    advice: 'Совет',
+  },
+  daily: {
+    focus: 'На что обратить внимание',
   },
 }
 
