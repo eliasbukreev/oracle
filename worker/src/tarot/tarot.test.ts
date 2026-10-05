@@ -1,13 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { DrawnCard } from "../types";
 import { FULL_DECK, MAJOR_ARCANA, deckCardById, isDeckId } from "./deck";
-import {
-  ORIENTATION_LABELS_RU,
-  POSITION_LABELS_RU,
-  SPREAD_POSITIONS,
-  drawSpread,
-  drawThreeCards,
-} from "./draw";
+import { ORIENTATION_LABELS_RU, drawSpread, drawThreeCards } from "./draw";
 import { classifyPrompt, parseClassification } from "./classify";
 import { tarotPrompt } from "./prompt";
 import { SPREADS } from "./spreads";
@@ -144,9 +138,11 @@ describe("draw", () => {
     expect(drawThreeCards(() => 0)).toEqual(drawThreeCards(() => 0));
   });
 
-  it("позиции и положения покрыты подписями", () => {
-    for (const p of SPREAD_POSITIONS) {
-      expect(POSITION_LABELS_RU[p]).toBeTruthy();
+  it("позиции всех раскладов и положения покрыты подписями", () => {
+    for (const spread of Object.values(SPREADS)) {
+      for (const p of spread.positions) {
+        expect(spread.positionLabelsRu[p]?.trim().length).toBeGreaterThan(0);
+      }
     }
     expect(ORIENTATION_LABELS_RU.upright).toBe("ПРЯМАЯ");
     expect(ORIENTATION_LABELS_RU.reversed).toBe("ПЕРЕВЁРНУТАЯ");

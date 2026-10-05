@@ -17,11 +17,23 @@ OpenRouter + Groq (OpenAI-совместимые chat/completions)
 ```text
 frontend/   # Nuxt 4 + Vue, статический сайт для GitHub Pages
 worker/     # Cloudflare Worker (API), TypeScript
+shared/     # общий контракт API: типы + подписи позиций (без рантайма)
 docs/       # документация
 .github/workflows/deploy.yml  # CI/CD: worker + frontend + Pages
 ```
 
 Вся инфраструктура — Cloudflare Workers + GitHub Pages, IaC нет, деплой через Wrangler.
+
+## Shared `shared/`
+
+Пакет `@oracle/shared` (`file:../shared` в обоих `package.json`):
+типы контракта (`SpreadId`, `TarotCard`, `TarotResponse`, …) и таблица
+русских подписей позиций + `positionLabel()`. Правил два:
+
+1. Контракт правится **только здесь** — воркер и фронт реэкспортируют,
+   копипаста типов и подписей в пакетах быть не должно.
+2. Изменения обратно совместимые (только добавление): деплои воркера
+   и фронта идут раздельно, фронт толерантен (1–10 карт, пустые URL).
 
 ## Frontend `frontend/`
 

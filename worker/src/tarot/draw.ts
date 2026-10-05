@@ -5,19 +5,7 @@ import type {
   TarotPosition,
 } from "../types";
 import { FULL_DECK } from "./deck";
-
-export const SPREAD_POSITIONS: readonly ("past" | "present" | "future")[] = [
-  "past",
-  "present",
-  "future",
-];
-
-export const POSITION_LABELS_RU: Record<"past" | "present" | "future", string> =
-{
-  past: "Прошлое",
-  present: "Настоящее",
-  future: "Будущее",
-};
+import { SPREADS } from "./spreads";
 
 export const ORIENTATION_LABELS_RU: Record<TarotOrientation, string> = {
   upright: "ПРЯМАЯ",
@@ -59,7 +47,7 @@ export function drawCards(
 
 /** Тянет 3 уникальные карты из 78. rand инжектится для детерминированных тестов. */
 export function drawThreeCards(rand: () => number = Math.random): DrawnCard[] {
-  return drawCards(SPREAD_POSITIONS, rand);
+  return drawSpread(SPREADS.classic, rand);
 }
 
 /** Тянет карты под расклад из реестра. */

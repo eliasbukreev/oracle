@@ -1,17 +1,18 @@
-// Платформенно-независимые контракты: домен и DI.
-// Модуль ничего не знает про Cloudflare, Request/Response и Env.
-
-/** Идентификатор расклада. */
-export type SpreadId =
-  | "classic"
-  | "relations"
-  | "choice"
-  | "yesno"
-  | "diagnose"
-  | "period"
-  | "daily";
-
-export type TarotPosition = string;
+import type {
+  ChoiceVariants,
+  SpreadId,
+  TarotOrientation,
+  TarotPosition,
+  TarotResponse,
+} from "@oracle/shared";
+export type {
+  ChoiceVariants,
+  SpreadId,
+  TarotCard,
+  TarotOrientation,
+  TarotPosition,
+  TarotResponse,
+} from "@oracle/shared";
 
 /** Описание расклада из реестра (spreads.ts). Подписи — только
  *  для своих позиций, остальное промт не использует. */
@@ -26,16 +27,6 @@ export interface SpreadDef {
   requiresVariants: boolean;
 }
 
-/** Названия вариантов для расклада «Крест выбора». Источник — запрос
- *  пользователя, модель их подменить не может (см. validate.ts). */
-export interface ChoiceVariants {
-  a: string;
-  b: string;
-}
-
-/** Положение карты: прямая или перевёрнутая. Тянет сервер монеткой. */
-export type TarotOrientation = "upright" | "reversed";
-
 /** Карта, вытянутая сервером до обращения к LLM. Имя каноническое. */
 export interface DrawnCard {
   id: string;
@@ -49,27 +40,6 @@ export interface TarotAskInput {
   question: string;
   spread: SpreadDef;
   drawnCards: DrawnCard[];
-  variants?: ChoiceVariants;
-}
-
-/** Одна карта в ответе API: imageUrl — абсолютный URL картинки в R2
- *  (пустая строка, если хранилище не настроено — фронт рисует текст). */
-export interface TarotCard {
-  id: string;
-  name: string;
-  position: TarotPosition;
-  orientation: TarotOrientation;
-  meaning: string;
-  imageUrl: string;
-}
-
-/** Расклад — ответ API. Поле spread подсказывает фронту раскладку
- *  финала (ряд или крест); variants — эхо запроса, не ответ модели. */
-export interface TarotResponse {
-  spread: SpreadId;
-  cards: TarotCard[];
-  summary: string;
-  backImageUrl: string;
   variants?: ChoiceVariants;
 }
 

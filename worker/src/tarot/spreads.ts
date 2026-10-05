@@ -1,5 +1,6 @@
 // Реестр раскладов: сколько карт, какие позиции, нужны ли варианты выбора.
 // Промт/валидация/фронт строятся от этого реестра, а не от захардкоженной тройки.
+import { SPREAD_POSITION_LABELS_RU } from "@oracle/shared";
 import type { ChoiceVariants, SpreadDef, SpreadId } from "../types";
 
 export const MAX_VARIANT_LENGTH = 100;
@@ -9,11 +10,7 @@ export const SPREADS: Record<SpreadId, SpreadDef> = {
     id: "classic",
     cardCount: 3,
     positions: ["past", "present", "future"],
-    positionLabelsRu: {
-      past: "Прошлое",
-      present: "Настоящее",
-      future: "Будущее",
-    },
+    positionLabelsRu: SPREAD_POSITION_LABELS_RU.classic,
     descriptionRu:
       "Классический расклад на три карты: прошлое — настоящее — будущее. " +
       "Покажи динамику развития ситуации от корней к исходу.",
@@ -23,13 +20,7 @@ export const SPREADS: Record<SpreadId, SpreadDef> = {
     id: "relations",
     cardCount: 5,
     positions: ["self", "other", "attraction", "obstacle", "potential"],
-    positionLabelsRu: {
-      self: "Я в этих отношениях",
-      other: "Другой человек",
-      attraction: "Что нас притягивает",
-      obstacle: "Что мешает",
-      potential: "Потенциал отношений",
-    },
+    positionLabelsRu: SPREAD_POSITION_LABELS_RU.relations,
     descriptionRu:
       "Расклад на отношения: первые две карты — двое людей, третья — " +
       "что их связывает, четвёртая — препятствие между ними, пятая — " +
@@ -40,13 +31,7 @@ export const SPREADS: Record<SpreadId, SpreadDef> = {
     id: "choice",
     cardCount: 5,
     positions: ["core", "optionA", "outcomeA", "optionB", "outcomeB"],
-    positionLabelsRu: {
-      core: "Суть ситуации",
-      optionA: "Если выбрать вариант А",
-      outcomeA: "Что даст вариант А",
-      optionB: "Если выбрать вариант Б",
-      outcomeB: "Что даст вариант Б",
-    },
+    positionLabelsRu: SPREAD_POSITION_LABELS_RU.choice,
     descriptionRu:
       "Расклад выбора между двумя путями: центральная карта — суть " +
       "ситуации, ветви А и Б — путь и его плоды. В выводе сравни ветви " +
@@ -57,11 +42,7 @@ export const SPREADS: Record<SpreadId, SpreadDef> = {
     id: "yesno",
     cardCount: 3,
     positions: ["pro", "con", "outcome"],
-    positionLabelsRu: {
-      pro: "Что говорит «за»",
-      con: "Что говорит «против»",
-      outcome: "Вероятный результат",
-    },
+    positionLabelsRu: SPREAD_POSITION_LABELS_RU.yesno,
     descriptionRu:
       "Расклад для конкретного решения. Первая карта — что работает " +
       "в пользу, вторая — препятствие и риск, третья — к чему движется " +
@@ -74,13 +55,7 @@ export const SPREADS: Record<SpreadId, SpreadDef> = {
     id: "diagnose",
     cardCount: 5,
     positions: ["reality", "blindspot", "block", "resource", "trend"],
-    positionLabelsRu: {
-      reality: "Что происходит на самом деле",
-      blindspot: "Чего я не вижу",
-      block: "Что мешает",
-      resource: "Что может помочь",
-      trend: "К чему ведёт ситуация",
-    },
+    positionLabelsRu: SPREAD_POSITION_LABELS_RU.diagnose,
     descriptionRu:
       "Диагностический расклад, а не предсказательный. Первая карта — " +
       "основная динамика, а не фасад. Пятая — не неизбежный финал, " +
@@ -92,13 +67,7 @@ export const SPREADS: Record<SpreadId, SpreadDef> = {
     id: "period",
     cardCount: 5,
     positions: ["energy", "work", "love", "trial", "advice"],
-    positionLabelsRu: {
-      energy: "Общая энергия периода",
-      work: "Работа и деньги",
-      love: "Отношения",
-      trial: "Главное испытание",
-      advice: "Совет",
-    },
+    positionLabelsRu: SPREAD_POSITION_LABELS_RU.period,
     descriptionRu:
       "Периодический обзор. Определи период из вопроса: неделя, месяц " +
       "или год; если не указан — толкуй нейтрально ко всем трём. " +
@@ -110,9 +79,7 @@ export const SPREADS: Record<SpreadId, SpreadDef> = {
     id: "daily",
     cardCount: 1,
     positions: ["focus"],
-    positionLabelsRu: {
-      focus: "На что обратить внимание",
-    },
+    positionLabelsRu: SPREAD_POSITION_LABELS_RU.daily,
     descriptionRu:
       "Одна карта-ориентир на день. Определи из вопроса: сегодня или " +
       "завтра. Не превращай карту в конкретное предсказание события: " +
