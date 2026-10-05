@@ -16,22 +16,14 @@ export interface Env {
   OPENROUTER_MODEL: string;
   GROQ_API_KEY: string;
   GROQ_MODEL: string;
-  /** Ключ orcarouter.ai. Пусто = провайдер не собирается. */
   ORCA_API_KEY: string;
   ORCA_MODEL: string;
   ORACLE_MAX_TOKENS: string;
   ORACLE_TEMPERATURE: string;
   ORACLE_TIMEOUT: string;
   CORS_ALLOWED_ORIGINS: string;
-  /** Base URL картинок таро (R2 за кастомным доменом). Пусто = ответы без картинок. */
   TAROT_IMAGE_BASE_URL?: string;
-  /** Имя primary LLM-провайдера. Не задано — используется дефолт. */
-  ORACLE_PROVIDER?: string;
-  /** Имя fallback-провайдера. Не задано — fallback отключён. */
-  ORACLE_FALLBACK_PROVIDER?: string;
-  // Штатные Workers Rate Limiting биндинги. Опциональны, чтобы
-  // `wrangler dev` без настроенных лимитов не падал: тогда проверка
-  // пропускается с предупреждением в лог.
+  ORACLE_PROVIDERS?: string;
   ORACLE_PER_IP_LIMITER?: RateLimit;
   ORACLE_GLOBAL_LIMITER?: RateLimit;
 }
@@ -40,6 +32,20 @@ function configErrorResponse(request: Request, env: Env): Response {
   return jsonResponse(request, env.CORS_ALLOWED_ORIGINS ?? "", 502, {
     error: "oracle_unavailable",
   });
+}
+
+export function parseProviderChain(env: Env): string[] {
+  const kinds = (env.ORACLE_PROVIDERS ?? "")
+    .split(",")
+    .map((kind) => kind.trim())
+    .filter((kind) => kind.length > 0);
+  const unique = [...new Set(kinds)];
+
+  if (unique.length !== kinds.length) {
+    console.error("provider_chain_duplicates_dropped");
+  }
+
+  return unique.length > 0 ? unique : [DEFAULT_PROVIDER];
 }
 
 function providerCredentials(
@@ -109,29 +115,26 @@ export default {
       });
     }
 
-    const primaryKind = env.ORACLE_PROVIDER?.trim() || DEFAULT_PROVIDER;
-    const primary = buildProvider(primaryKind, env);
+    const chainKinds = parseProviderChain(env);
+    const chain: OracleProvider[] = [];
 
-    if (!primary) {
+    for (const kind of chainKinds) {
+      const provider = buildProvider(kind, env);
+
+      if (!provider) {
+        console.error(`provider_unavailable kind=${kind}`);
+      } else {
+        chain.push(provider);
+      }
+    }
+
+    if (chain.length === 0) {
       return configErrorResponse(request, env);
     }
 
-    let provider: OracleProvider = primary;
-
-    const fallbackKind = env.ORACLE_FALLBACK_PROVIDER?.trim() || "";
-    if (fallbackKind) {
-      if (fallbackKind === primaryKind) {
-        console.error(`fallback_same_as_primary kind=${fallbackKind}`);
-      } else {
-        const secondary = buildProvider(fallbackKind, env);
-
-        if (!secondary) {
-          console.error(`fallback_unavailable kind=${fallbackKind}`);
-        } else {
-          provider = createFallbackProvider(primary, secondary);
-        }
-      }
-    }
+    const first = chain[0] as OracleProvider;
+    const provider: OracleProvider =
+      chain.length === 1 ? first : createFallbackProvider(chain);
 
     return handleAsk(request, {
       provider,

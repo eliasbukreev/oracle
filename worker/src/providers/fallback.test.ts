@@ -71,58 +71,57 @@ afterEach(() => {
 });
 
 describe("FallbackProvider", () => {
-  it("возвращает ответ primary и не трогает secondary", async () => {
-    const secondaryAsk = vi.fn(async () => ANSWER);
-    const provider = createFallbackProvider(stubProvider(ANSWER, "primary"), {
-      name: "secondary",
-      askTarot: secondaryAsk,
-      classify: async () => null,
-    });
-
-    expect(provider.name).toBe("fallback(primary+secondary)");
-    await expect(provider.askTarot(INPUT)).resolves.toEqual(ANSWER);
-    expect(secondaryAsk).not.toHaveBeenCalled();
+  it("бросает на цепочке короче двух", () => {
+    expect(() => createFallbackProvider([])).toThrow(/too_short/);
+    expect(() => createFallbackProvider([stubProvider(ANSWER)])).toThrow(
+      /too_short/,
+    );
   });
 
-  it("при пустом ответе primary спрашивает secondary тем же входом", async () => {
-    const secondaryAsk = vi.fn(async () => ANSWER);
-    const provider = createFallbackProvider(
+  it("возвращает ответ primary и не трогает остальных", async () => {
+    const secondAsk = vi.fn(async () => ANSWER);
+    const thirdAsk = vi.fn(async () => ANSWER);
+    const provider = createFallbackProvider([
+      stubProvider(ANSWER, "primary"),
+      { name: "second", askTarot: secondAsk, classify: async () => null },
+      { name: "third", askTarot: thirdAsk, classify: async () => null },
+    ]);
+
+    expect(provider.name).toBe("fallback(primary+second+third)");
+    await expect(provider.askTarot(INPUT)).resolves.toEqual(ANSWER);
+    expect(secondAsk).not.toHaveBeenCalled();
+    expect(thirdAsk).not.toHaveBeenCalled();
+  });
+
+  it("идёт по цепочке до первого успеха тем же входом", async () => {
+    const thirdAsk = vi.fn(async () => ANSWER);
+    const provider = createFallbackProvider([
       stubProvider({ ok: false, blocked: false }, "primary"),
-      { name: "secondary", askTarot: secondaryAsk, classify: async () => null },
-    );
+      stubProvider({ ok: false, blocked: true }, "second"),
+      { name: "third", askTarot: thirdAsk, classify: async () => null },
+    ]);
 
     await expect(provider.askTarot(INPUT)).resolves.toEqual(ANSWER);
-    expect(secondaryAsk).toHaveBeenCalledWith(INPUT);
+    expect(thirdAsk).toHaveBeenCalledWith(INPUT);
   });
 
-  it("при запрете primary пробует secondary", async () => {
-    const secondaryAsk = vi.fn(async () => ANSWER);
-    const provider = createFallbackProvider(
-      stubProvider({ ok: false, blocked: true }, "primary"),
-      { name: "secondary", askTarot: secondaryAsk, classify: async () => null },
-    );
-
-    await expect(provider.askTarot(INPUT)).resolves.toEqual(ANSWER);
-    expect(secondaryAsk).toHaveBeenCalledWith(INPUT);
-  });
-
-  it("пробрасывает запрет когда пусты оба провайдера", async () => {
-    const provider = createFallbackProvider(
-      stubProvider({ ok: false, blocked: true }, "primary"),
-      stubProvider({ ok: false, blocked: true }, "secondary"),
-    );
-    await expect(provider.askTarot(INPUT)).resolves.toEqual({
+  it("blocked только когда упёрлись все", async () => {
+    const allBlocked = createFallbackProvider([
+      stubProvider({ ok: false, blocked: true }, "a"),
+      stubProvider({ ok: false, blocked: true }, "b"),
+    ]);
+    await expect(allBlocked.askTarot(INPUT)).resolves.toEqual({
       ok: false,
       blocked: true,
     });
   });
 
-  it("возвращает null-эквивалент когда оба недоступны", async () => {
-    const provider = createFallbackProvider(
-      stubProvider({ ok: false, blocked: false }, "primary"),
-      stubProvider({ ok: false, blocked: false }, "secondary"),
-    );
-    await expect(provider.askTarot(INPUT)).resolves.toEqual({
+  it("точечный запрет не маскируется под системный", async () => {
+    const mixed = createFallbackProvider([
+      stubProvider({ ok: false, blocked: true }, "a"),
+      stubProvider({ ok: false, blocked: false }, "b"),
+    ]);
+    await expect(mixed.askTarot(INPUT)).resolves.toEqual({
       ok: false,
       blocked: false,
     });
@@ -130,34 +129,42 @@ describe("FallbackProvider", () => {
 
   it("classify: берёт ответ primary", async () => {
     const classified = { spread: SPREADS.relations };
-    const provider = createFallbackProvider(
-      { name: "primary", askTarot: async () => ANSWER, classify: async () => classified },
+    const provider = createFallbackProvider([
+      {
+        name: "primary",
+        askTarot: async () => ANSWER,
+        classify: async () => classified,
+      },
       stubProvider(ANSWER, "secondary"),
-    );
+    ]);
     await expect(provider.classify("Любит ли меня?")).resolves.toEqual(
       classified,
     );
   });
 
-  it("classify: при null от primary спрашивает secondary", async () => {
+  it("classify: идёт по цепочке до первого ответа", async () => {
     const classified = { spread: SPREADS.choice };
-    const secondaryClassify = vi.fn(async () => classified);
-    const provider = createFallbackProvider(stubProvider(ANSWER, "primary"), {
-      name: "secondary",
-      askTarot: async () => ANSWER,
-      classify: secondaryClassify,
-    });
+    const thirdClassify = vi.fn(async () => classified);
+    const provider = createFallbackProvider([
+      stubProvider(ANSWER, "primary"),
+      stubProvider(ANSWER, "second"),
+      {
+        name: "third",
+        askTarot: async () => ANSWER,
+        classify: thirdClassify,
+      },
+    ]);
     await expect(provider.classify("Что выбрать?")).resolves.toEqual(
       classified,
     );
-    expect(secondaryClassify).toHaveBeenCalledWith("Что выбрать?");
+    expect(thirdClassify).toHaveBeenCalledWith("Что выбрать?");
   });
 
-  it("classify: null когда пусты оба", async () => {
-    const provider = createFallbackProvider(
+  it("classify: null когда пусты все", async () => {
+    const provider = createFallbackProvider([
       stubProvider(ANSWER, "primary"),
       stubProvider(ANSWER, "secondary"),
-    );
+    ]);
     await expect(provider.classify("Учить ли Rust?")).resolves.toBeNull();
   });
 });

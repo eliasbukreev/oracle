@@ -6,35 +6,45 @@ import type {
 } from "../types";
 
 export function createFallbackProvider(
-  primary: OracleProvider,
-  secondary: OracleProvider,
+  providers: OracleProvider[],
 ): OracleProvider {
-  async function askTarot(input: TarotAskInput): Promise<ProviderAnswer> {
-    const first = await primary.askTarot(input);
+  if (providers.length < 2) {
+    throw new Error(`fallback_chain_too_short length=${providers.length}`);
+  }
 
-    if (first.ok) {
-      return first;
+  const names = providers.map((p) => p.name).join("+");
+
+  async function askTarot(input: TarotAskInput): Promise<ProviderAnswer> {
+    let blocked = true;
+
+    for (const provider of providers) {
+      const answer = await provider.askTarot(input);
+
+      if (answer.ok) {
+        return answer;
+      }
+
+      blocked = blocked && answer.blocked;
+      console.warn(
+        `provider_fallback from=${provider.name} chain=${names} blocked=${answer.blocked}`,
+      );
     }
 
-    console.warn(`provider_fallback from=${primary.name} to=${secondary.name}`);
-    return secondary.askTarot(input);
+    return { ok: false, blocked };
   }
 
   async function classify(question: string): Promise<Classification | null> {
-    // Классификация дешёвая: при сбое primary пробуем secondary,
-    // итоговая неудача — null, workflow возьмёт classic.
-    const first = await primary.classify(question);
-    if (first) return first;
+    for (const provider of providers) {
+      const result = await provider.classify(question);
+      if (result) return result;
 
-    console.warn(
-      `provider_classify_fallback from=${primary.name} to=${secondary.name}`,
-    );
-    return secondary.classify(question);
+      console.warn(
+        `provider_classify_fallback from=${provider.name} chain=${names}`,
+      );
+    }
+
+    return null;
   }
 
-  return {
-    name: `fallback(${primary.name}+${secondary.name})`,
-    askTarot,
-    classify,
-  };
+  return { name: `fallback(${names})`, askTarot, classify };
 }

@@ -47,8 +47,7 @@ cd frontend && npm install && npm run dev   # http://localhost:3000
 `CLOUDFLARE_WORKER_URL` - адрес cf воркера
 `OPENROUTER_MODEL` - название модели openrouter | openai/gpt-oss-20b
 `GROQ_MODEL` - название модели groq | qwen/qwen3.8-27b:free
-`ORACLE_PROVIDER` - провайдер по умолчанию | openrouter
-`ORACLE_FALLBACK_PROVIDER`- запасной провайдер | groq
+`ORACLE_PROVIDERS` - цепочка провайдеров через запятую, первый — primary | openrouter,groq,orca
 `ORACLE_MAX_TOKENS` - максимальное количество токенов в ответе | 2500
 `ORACLE_TEMPERATURE` - температура модели, больше - эзотеричнее | 0.8
 `ORACLE_TIMEOUT` - сбор запроса при долгом ответе | 45
@@ -62,6 +61,7 @@ cd frontend && npm install && npm run dev   # http://localhost:3000
 `CLOUDFLARE_API_TOKEN`
 `GROQ_API_KEY`
 `OPENROUTER_API_KEY`
+`ORCA_API_KEY`
 
 ## Документация
 

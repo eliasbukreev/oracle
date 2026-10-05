@@ -119,17 +119,17 @@ src/index.ts               # composition root: Env → конфиги → про
 
 Выбор LLM — через DI: хендлер зависит только от интерфейса
 `OracleProvider`, конкретная реализация подставляется фабрикой
-`createProvider(kind, config)`. Primary задаётся env `ORACLE_PROVIDER`
-(дефолт `"openrouter"`), опциональный fallback — env `ORACLE_FALLBACK_PROVIDER`
-(пусто = выключен). Провайдер отвечает не голым `null`, а `ProviderAnswer`:
+`createProvider(kind, config)`. Порядок — env `ORACLE_PROVIDERS`
+(`"openrouter,groq,orca"`, первый — primary; пусто — дефолт `"openrouter"`).
+Провайдер отвечает не голым `null`, а `ProviderAnswer`:
 успех либо провал с флагом `blocked` (только для HTTP `403` провайдера).
-`FallbackProvider` при пустом ответе primary (4xx/5xx/timeout/сеть,
-а также битый контент) прозрачно спрашивает secondary тем же вопросом —
-включая случай запрета primary; итоговый `blocked` доходит до хендлера,
-только если упёрлись оба. Если пусты оба без запрета — `502`.
-Невалидный конфиг fallback не ломает primary: цепочка молча
-остаётся из одного провайдера с ошибкой в логе. Новый провайдер —
-это новый файл + одна ветка в фабрике, хендлер не меняется.
+`FallbackProvider` идёт по цепочке до первого успеха тем же входом
+(4xx/5xx/timeout/сеть, битый контент, запрет — всё ведёт дальше);
+итоговый `blocked` — только если упёрлись все, точечный запрет одного
+вендора под системный не маскируется. Если пусты все без запрета — `502`.
+Несобирающиеся провайдеры (неизвестное имя, битый конфиг) пропускаются
+с ошибкой в логе, цепочка из одного работает без fallback. Новый провайдер —
+это новый файл + одна ветка в фабрике + имя в `ORACLE_PROVIDERS`, хендлер не меняется.
 
 Обработка запроса. Проверки метода идут до сборки провайдера,
 поэтому preflight и 405 не зависят от ключей LLM (битый конфиг даёт
@@ -154,8 +154,7 @@ src/index.ts               # composition root: Env → конфиги → про
 | `OPENROUTER_MODEL` | var | идентификатор модели OpenRouter (`vendor/model`) |
 | `GROQ_API_KEY` | secret (`wrangler secret put`) | ключ Groq |
 | `GROQ_MODEL` | var | идентификатор модели Groq |
-| `ORACLE_PROVIDER` | var (опц.) | primary-провайдер, дефолт `openrouter` |
-| `ORACLE_FALLBACK_PROVIDER` | var (опц.) | fallback-провайдер, пусто = выключен |
+| `ORACLE_PROVIDERS` | var (опц.) | цепочка через запятую, первый — primary, напр. `"openrouter,groq,orca"`; пусто — дефолт `openrouter` |
 | `ORACLE_MAX_TOKENS` | var | лимит токенов ответа (classic ≥1200, расклады на 5 карт ≥2000) |
 | `ORACLE_TEMPERATURE` | var | температура |
 | `ORACLE_TIMEOUT` | var | таймаут запроса, сек |
@@ -172,7 +171,7 @@ Node везде 24: Nuxt 4 требует `^22.19.0 || ^24.11.0 || >=26`, а б�
   2. `frontend`: `npm ci`, `npm run lint`, `npm run typecheck` (`nuxt prepare` + `vue-tsc`), `npm run test` (vitest), затем `nuxt generate` с `NUXT_APP_BASE_URL` (из `vars.SITE_BASE_PATH`, пусто = `/oracle/`), `NUXT_PUBLIC_ORACLE_API_URL` (из `vars.CLOUDFLARE_WORKER_URL`) и `NUXT_PUBLIC_SITE_URL` (из `vars.SITE_URL`, пусто = текущий адрес Pages), загрузка артефакта Pages.
   3. `deploy-pages`: публикация на GitHub Pages. Только на `push`.
 
-  Нужные GitHub Secrets/Vars: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `GROQ_API_KEY`, `GROQ_MODEL`, `ORACLE_PROVIDER`, `ORACLE_FALLBACK_PROVIDER` (`groq` для связки openrouter → groq), `ORACLE_MAX_TOKENS`, `ORACLE_TEMPERATURE`, `ORACLE_TIMEOUT`, `CORS_ALLOWED_ORIGINS`, `CLOUDFLARE_WORKER_URL`, `TAROT_IMAGE_BASE_URL` (опц., см. «Изображения карт»), `SITE_URL` + `SITE_BASE_PATH` (опц., см. «Переезд на свой домен»).
+  Нужные GitHub Secrets/Vars: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `GROQ_API_KEY`, `GROQ_MODEL`, `ORACLE_PROVIDERS` (`openrouter,groq,orca` — цепочка, первый primary), `ORACLE_MAX_TOKENS`, `ORACLE_TEMPERATURE`, `ORACLE_TIMEOUT`, `CORS_ALLOWED_ORIGINS`, `CLOUDFLARE_WORKER_URL`, `TAROT_IMAGE_BASE_URL` (опц., см. «Изображения карт»), `SITE_URL` + `SITE_BASE_PATH` (опц., см. «Переезд на свой домен»).
 
   ## Переезд на свой домен (оставаясь на GitHub Pages)
 

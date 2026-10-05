@@ -76,8 +76,7 @@ jobs:
           GROQ_MODEL: ${{ vars.GROQ_MODEL }}
           ORCA_API_KEY: ${{ secrets.ORCA_API_KEY }}
           ORCA_MODEL: ${{ vars.ORCA_MODEL }}
-          ORACLE_PROVIDER: ${{ vars.ORACLE_PROVIDER }}
-          ORACLE_FALLBACK_PROVIDER: ${{ vars.ORACLE_FALLBACK_PROVIDER }}
+          ORACLE_PROVIDERS: ${{ vars.ORACLE_PROVIDERS }}
           ORACLE_MAX_TOKENS: ${{ vars.ORACLE_MAX_TOKENS }}
           ORACLE_TEMPERATURE: ${{ vars.ORACLE_TEMPERATURE }}
           ORACLE_TIMEOUT: ${{ vars.ORACLE_TIMEOUT }}
@@ -94,8 +93,7 @@ jobs:
             --var "OPENROUTER_MODEL:${OPENROUTER_MODEL}" \
             --var "GROQ_MODEL:${GROQ_MODEL}" \
             --var "ORCA_MODEL:${ORCA_MODEL}" \
-            --var "ORACLE_PROVIDER:${ORACLE_PROVIDER}" \
-            --var "ORACLE_FALLBACK_PROVIDER:${ORACLE_FALLBACK_PROVIDER}" \
+            --var "ORACLE_PROVIDERS:${ORACLE_PROVIDERS}" \
             --var "ORACLE_MAX_TOKENS:${ORACLE_MAX_TOKENS}" \
             --var "ORACLE_TEMPERATURE:${ORACLE_TEMPERATURE}" \
             --var "ORACLE_TIMEOUT:${ORACLE_TIMEOUT}" \

@@ -179,7 +179,7 @@ describe("worker fetch", () => {
 
     const res = await worker.fetch(
       postRequest(),
-      makeEnv({ ORACLE_FALLBACK_PROVIDER: "groq" }),
+      makeEnv({ ORACLE_PROVIDERS: "openrouter,groq" }),
     );
 
     expect(res.status).toBe(200);
@@ -210,7 +210,7 @@ describe("worker fetch", () => {
 
     const res = await worker.fetch(
       postRequest(),
-      makeEnv({ ORACLE_FALLBACK_PROVIDER: "groq" }),
+      makeEnv({ ORACLE_PROVIDERS: "openrouter,groq" }),
     );
 
     expect(res.status).toBe(200);
@@ -225,7 +225,7 @@ describe("worker fetch", () => {
 
     const res = await worker.fetch(
       postRequest(),
-      makeEnv({ ORACLE_FALLBACK_PROVIDER: "groq" }),
+      makeEnv({ ORACLE_PROVIDERS: "openrouter,groq" }),
     );
 
     expect(res.status).toBe(403);
@@ -260,7 +260,7 @@ describe("worker fetch", () => {
     const res = await worker.fetch(
       postRequest(),
       makeEnv({
-        ORACLE_FALLBACK_PROVIDER: "groq",
+        ORACLE_PROVIDERS: "openrouter,groq",
         GROQ_API_KEY: "   ",
       }),
     );
@@ -270,7 +270,7 @@ describe("worker fetch", () => {
     expect(json.cards).toHaveLength(3);
   });
 
-  it("ORACLE_PROVIDER=orca ходит в api.orcarouter.ai", async () => {
+  it("ORACLE_PROVIDERS=orca ходит в api.orcarouter.ai", async () => {
     const seenUrls: string[] = [];
     vi.stubGlobal(
       "fetch",
@@ -280,7 +280,7 @@ describe("worker fetch", () => {
       }),
     );
 
-    const res = await worker.fetch(postRequest(), makeEnv({ ORACLE_PROVIDER: "orca" }));
+    const res = await worker.fetch(postRequest(), makeEnv({ ORACLE_PROVIDERS: "orca" }));
 
     expect(res.status).toBe(200);
     // classify + askTarot — оба у primary.
@@ -305,10 +305,7 @@ describe("worker fetch", () => {
 
     const res = await worker.fetch(
       postRequest(),
-      makeEnv({
-        ORACLE_PROVIDER: "orca",
-        ORACLE_FALLBACK_PROVIDER: "openrouter",
-      }),
+      makeEnv({ ORACLE_PROVIDERS: "orca,openrouter" }),
     );
 
     expect(res.status).toBe(200);
@@ -320,5 +317,98 @@ describe("worker fetch", () => {
     expect(seenUrls[1]).toContain("openrouter.ai");
     expect(seenUrls[2]).toContain("orcarouter");
     expect(seenUrls[3]).toContain("openrouter.ai");
+  });
+});
+
+describe("parseProviderChain", () => {
+  it("парсит список по порядку", async () => {
+    const { parseProviderChain } = await import("./index");
+    expect(
+      parseProviderChain({ ...makeEnv(), ORACLE_PROVIDERS: "groq, orca" }),
+    ).toEqual(["groq", "orca"]);
+  });
+
+  it("чистит мусор и дубли", async () => {
+    const { parseProviderChain } = await import("./index");
+    expect(
+      parseProviderChain({
+        ...makeEnv(),
+        ORACLE_PROVIDERS: " groq,,groq, ",
+      }),
+    ).toEqual(["groq"]);
+  });
+
+  it("пустой список даёт дефолт", async () => {
+    const { parseProviderChain } = await import("./index");
+    expect(
+      parseProviderChain({ ...makeEnv(), ORACLE_PROVIDERS: "   " }),
+    ).toEqual(["openrouter"]);
+    expect(parseProviderChain(makeEnv())).toEqual(["openrouter"]);
+  });
+});
+
+describe("worker fetch chain", () => {
+  it("ORACLE_PROVIDERS из трёх: падают два первых, отвечает третий", async () => {
+    const seenUrls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+        const url = String(input);
+        seenUrls.push(url);
+        if (url.includes("orcarouter")) {
+          return echoAnyResponse(promptContent(init));
+        }
+        return new Response("{}", { status: 500 });
+      }),
+    );
+
+    const res = await worker.fetch(
+      postRequest(),
+      makeEnv({ ORACLE_PROVIDERS: "openrouter,groq,orca" }),
+    );
+
+    expect(res.status).toBe(200);
+    const json = (await res.json()) as { cards: unknown[] };
+    expect(json.cards).toHaveLength(3);
+    // classify: openrouter→groq→orca(ок); askTarot: openrouter→groq→orca(ок).
+    expect(seenUrls).toHaveLength(6);
+    expect(seenUrls[5]).toContain("orcarouter");
+  });
+
+  it("все недоступны и все в запрете → 403", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("forbidden", { status: 403 })),
+    );
+
+    const res = await worker.fetch(
+      postRequest(),
+      makeEnv({ ORACLE_PROVIDERS: "openrouter,groq,orca" }),
+    );
+
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: "blocked" });
+  });
+
+  it("смешанные сбои → 502, а не blocked", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string | URL | Request) => {
+        const url = String(input);
+        // Первый в запрете, остальные просто лежат.
+        if (url.includes("openrouter.ai")) {
+          return new Response("forbidden", { status: 403 });
+        }
+        return new Response("{}", { status: 500 });
+      }),
+    );
+
+    const res = await worker.fetch(
+      postRequest(),
+      makeEnv({ ORACLE_PROVIDERS: "openrouter,groq,orca" }),
+    );
+
+    expect(res.status).toBe(502);
+    expect(await res.json()).toEqual({ error: "oracle_unavailable" });
   });
 });
