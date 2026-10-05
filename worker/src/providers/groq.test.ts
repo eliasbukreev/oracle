@@ -34,7 +34,6 @@ describe("GroqProvider", () => {
     expect(result).toEqual({
       ok: true,
       response: {
-        // TODO(шаг 3): фикстуры под реестры раскладов.
         spread: "classic",
         cards: [
           {

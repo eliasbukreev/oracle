@@ -6,7 +6,6 @@ import { createFallbackProvider } from "./fallback";
 const ANSWER: ProviderAnswer = {
   ok: true,
   response: {
-    // TODO(шаг 3): фикстуры под реестры раскладов.
     spread: "classic",
     cards: [
       {
